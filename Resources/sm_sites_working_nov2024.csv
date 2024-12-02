@@ -1,0 +1,102 @@
+FID,phone_coverage_sel,Type,name,Location,Name_2,contact,Visit,number,long_proposed,lat_proposed,long_actual_sensor,lat_actual_sensor,phone_coverage_map_1,phone_coverage_map_2,phone_coverage_map_3,phone_coverage_map_4
+555,0,PURP,Purposive,Andrew,Andrew Harding,Mark Glover,Green,1,,,148.984272,-34.814287,,,,
+1,0,NRM,"Croxdale, QLD","Croxdale, QLD",,Andrew McCartney,Green,1,146.19142,-26.44666,,,147,184,230,255
+2,0,NRM,Barrossa Improved Grazing Group,Mt Crawford,Julian Maul,Brett Nietschke,Orange,1,139.008132,-34.680824,139.006871,-34.680629,147,184,230,255
+3,0,NRM,Barrossa Improved Grazing Group,Angaston,Pete Mitchell,Brett Nietschke,Orange,1,139.107139,-34.534521,139.10043,-34.53434,147,184,230,255
+4,0,NRM,Barrossa Improved Grazing Group,Mengler Hill,Pete Mitchell,Brett Nietschke,Orange,1,139.039703,-34.533808,139.030841,-34.522729,147,184,230,255
+6,0,NRM,Barrossa Improved Grazing Group,Truro,Greg Koch,Brett Nietschke,Orange,1,139.15268,-34.446612,139.148134,-34.448859,147,184,230,255
+7,0,NRM,Barrossa Improved Grazing Group,Eden Valley,Andrew Jaeschke,Brett Nietschke,Orange,1,139.17792,-34.61624,139.16694,-34.621295,147,184,230,255
+8,0,NRM,Barrossa Improved Grazing Group,Ebenezer,Tracy Bonython,Brett Nietschke,Orange,1,139.02004,-34.437212,139.020953,-34.438953,147,184,230,255
+12,0,NRM,Murray Goulburn,Corop,Tim Waston,Dan Walker,Orange,1,144.705779,-36.455972,144.705654,-36.456392,147,184,230,255
+13,0,NRM,Murray Goulburn,Rochester,Tim Waston,Dan Walker,Orange,1,144.751097,-36.399786,144.753312,-36.399318,147,184,230,255
+14,0,NRM,Murray Goulburn,Mystic Park,Brett Boyd,Dan Walker,Orange,1,143.65921,-35.505859,143.631053,-35.525793,147,184,230,255
+15,0,NRM,Murray Goulburn,Bael Bael,Brett Boyd,Dan Walker,Orange,1,143.72523,-35.677424,143.727016,-35.677226,147,184,230,255
+21,0,NRM,RMPW12,Cadell,,Michael Cutting,Orange,1,139.772795,-34.054941,139.772845,-34.054928,147,184,230,255
+36,0,NRM,RMPW10,Taylorville,,Michael Cutting,Orange,1,139.965871,-34.089715,139.965962,-34.089857,147,184,230,255
+38,0,NRM,RMPW24,Waikerie-Dryland,,Michael Cutting,Orange,1,140.029717,-34.292786,140.030097,-34.292334,147,184,230,255
+40,0,NRM,RMPW04,Yamba,,Michael Cutting,Orange,1,140.833325,-34.249219,140.840124,-34.249013,147,184,230,255
+41,0,NRM,RMPW14,Caurnamont,,Michael Cutting,Orange,1,139.580149,-34.854141,139.589001,-34.872398,147,184,230,255
+43,0,NRM,RMPW15,Mypolonga,,Michael Cutting,Orange,1,139.333888,-35.017461,,,147,184,230,255
+44,0,NRM,RMPW18,Narrung,,Michael Cutting,Orange,1,139.225511,-35.549241,139.22503,-35.54953,148,185,231,255
+52,0,NRM,RMPW30,Wellington East,,Michael Cutting,Orange,1,139.407464,-35.307503,139.407426,-35.307537,146,183,229,255
+53,0,NRM,RMPW31,Cambrai,,Michael Cutting,Orange,1,139.288378,-34.678264,139.28809,-34.67807,147,184,230,255
+54,0,NRM,RMPW32,Sherlock,,Michael Cutting,Orange,1,139.733213,-35.340919,139.753912,-35.428931,147,184,230,255
+58,0,NRM,Bowaka,Bowaka,,Alison Boomsma,Orange,1,140.04597,-37.01970367,,,147,184,230,255
+75,0,NRM,Tintinara,Tintinara,,Alison Boomsma,Orange,1,140.06967,-35.87183333,,,147,184,230,255
+76,0,NRM,Wirrega,Wirrega,,Alison Boomsma,Orange,1,140.624,-36.36083333,,,147,184,230,255
+77,0,NRM,Rylington Park,WA,,Linda Mertz,Orange,1,116.51496243,-34.03128455,,,147,184,230,255
+80,0,TERN,NSABBS0004,Pilliga State Conservation Area,,Ben Sparrow,Orange,1,149.2468944,-30.46096389,,,147,184,230,255
+81,0,TERN,NSABBS0007,Breeza Station,,Ben Sparrow,Orange,1,150.4668667,-31.29615556,,,147,184,230,255
+82,0,TERN,NSAMDD0002,Mallee Cliffs National Park,,Ben Sparrow,Orange,1,142.6025889,-34.20481667,,,147,184,230,255
+84,0,TERN,NSAMDD0004,Mallee Cliffs National Park,,Ben Sparrow,Orange,1,142.5594,-34.16536667,,,147,184,230,255
+86,0,TERN,NSAMDD0006,Mungo National Park,,Ben Sparrow,Orange,1,143.1665361,-33.66431944,,,147,184,230,255
+92,0,TERN,NSAMDD0018,Loughnan Nature Reserve,,Ben Sparrow,Orange,1,145.7840083,-33.56723333,,,147,184,230,255
+93,0,TERN,NSAMDD0021,Nombinnie Nature Reserve,,Ben Sparrow,Orange,1,145.7171861,-33.20083611,,,147,184,230,255
+94,0,TERN,NSAMDD0022,Nombinnie Nature Reserve,,Ben Sparrow,Orange,1,145.7601722,-33.22522222,,,147,184,230,255
+95,0,TERN,NSAMDD0023,Kajuligah Nature Reserve,,Ben Sparrow,Orange,1,144.6497778,-32.69009167,,,147,184,230,255
+97,0,TERN,NSAMDD0028,Paroo Darling National Park,,Ben Sparrow,Orange,1,144.1828167,-31.49143889,,,151,188,234,255
+98,1,TERN,NSAMDD0029,Paroo Darling National Park,,Ben Sparrow,Orange,1,144.3669639,-31.33251667,,,255,255,255,255
+99,1,TERN,NSAMDD0030,Paroo Darling National Park,,Ben Sparrow,Orange,1,144.3637667,-31.31792778,,,255,255,255,255
+102,0,TERN,NSANSS0001,Goobang National Park,,Ben Sparrow,Orange,1,148.3476944,-32.74985556,,,146,183,229,255
+104,0,TERN,NSTSYB0004,Blue Mountains National Park,,Ben Sparrow,Orange,1,150.4564167,-33.70502222,,,147,184,230,255
+107,0,TERN,NTAARP0001,Kakadu National Park,,Ben Sparrow,Orange,1,132.2700917,-13.55729167,,,147,218,241,255
+108,0,TERN,NTAARP0002,Kakadu National Park,,Ben Sparrow,Orange,1,132.2943639,-13.54561111,,,147,185,230,255
+109,0,TERN,NTABRT0001,Pine Hill Station,,Ben Sparrow,Orange,1,133.2473278,-22.2836,,,147,184,230,255
+110,0,TERN,NTABRT0002,Pine Hill Station,,Ben Sparrow,Orange,1,133.2506306,-22.28366944,,,147,184,230,255
+111,0,TERN,NTABRT0003,Pine Hill Station,,Ben Sparrow,Orange,1,133.2698583,-22.28358056,,,147,184,230,255
+112,0,TERN,NTABRT0007,Pine Hill Station,,Ben Sparrow,Orange,1,133.6380666,-22.2883483,,,147,184,230,255
+113,0,TERN,NTAFIN0001,Owen Springs Reserve,,Ben Sparrow,Orange,1,133.4679222,-24.12430278,,,147,184,230,255
+115,0,TERN,NTAFIN0033,Crown Land,,Ben Sparrow,Orange,1,133.9717556,-24.03365833,,,147,184,230,255
+116,0,TERN,NTAMGD0005,Newcastle Waters Station,,Ben Sparrow,Orange,1,133.4835667,-17.45584722,,,147,184,230,255
+117,0,TERN,NTAPCK0002,Kakadu National Park,,Ben Sparrow,Orange,1,132.7934528,-12.820425,,,147,184,230,255
+118,1,TERN,NTASSD0016,Mac Clark Conservation Reserve,,Ben Sparrow,Orange,1,135.5079972,-25.11011389,,,254,254,254,255
+119,1,TERN,NTASSD0017,Andado Station,,Ben Sparrow,Orange,1,135.2584222,-25.47658889,,,252,252,252,255
+120,0,TERN,NTATAN0001,Singleton Station,,Ben Sparrow,Orange,1,134.2054273,-20.6995098,,,147,184,230,255
+121,0,TERN,NTATAN0002,Singleton Station,,Ben Sparrow,Orange,1,134.2003669,-20.7228814,,,147,184,230,255
+122,1,TERN,NTATAN0003,Singleton Station,,Ben Sparrow,Orange,1,133.8713681,-20.9215447,,,245,245,245,255
+123,1,TERN,NTATAN0004,Singleton Station,,Ben Sparrow,Orange,1,133.886123,-20.921778,,,245,245,245,255
+124,0,TERN,NTTDAC0001,Litchfield National Park,,Ben Sparrow,Orange,1,130.7956871,-13.13983269,,,147,184,230,255
+125,0,TERN,NTTDMR0002,Powel Creek Station,,Ben Sparrow,Orange,1,133.6350222,-18.07249722,,,147,187,231,255
+126,0,TERN,NTTDMR0003,Powel Creek Station,,Ben Sparrow,Orange,1,133.6669306,-18.07204444,,,147,187,231,255
+127,0,TERN,QDABBN0001,Goonderoo Reserve,,Ben Sparrow,Orange,1,148.1582481,-23.85900806,,,147,184,230,255
+128,0,TERN,QDABBN0002,Goonderoo Reserve,,Ben Sparrow,Orange,1,148.1493889,-23.86987889,,,147,184,230,255
+130,0,TERN,QDABBS0006,Abattoir Reserve,,Ben Sparrow,Orange,1,151.2334111,-27.15261,,,147,184,230,255
+131,0,TERN,QDABBS0007,Saint Ruth Reserve,,Ben Sparrow,Orange,1,151.24217,-27.32918111,,,147,184,230,255
+132,0,TERN,QDABBS0009,Myall Park Private Reserve,,Ben Sparrow,Orange,1,151.6128,-27.38565306,,,147,184,230,255
+133,0,TERN,QDACHC0002,Noonbah Station,,Ben Sparrow,Orange,1,143.1691611,-24.12595556,,,147,184,230,255
+134,0,TERN,QDAEIU0008,Fletcherview Research Station,,Ben Sparrow,Orange,1,146.1891868,-19.88786634,,,147,184,230,255
+135,0,TERN,QDAEIU0009,Fletcherview Research Station,,Ben Sparrow,Orange,1,146.1872187,-19.88785772,,,147,184,230,255
+136,0,TERN,QDAMGD0007,Whitehill station,,Ben Sparrow,Orange,1,144.0949417,-23.65817222,,,147,184,230,255
+137,0,TERN,QDAMGD0008,Whitehill Station,,Ben Sparrow,Orange,1,144.0749806,-23.64601389,,,147,184,230,255
+139,0,TERN,QDASEQ0002,Russell Reserve,,Ben Sparrow,Orange,1,151.6327189,-26.90262194,,,147,184,230,255
+140,0,TERN,SAAEYB0021,Hincks Conservation Park,,Ben Sparrow,Orange,1,136.1292331,-33.83882212,,,147,184,230,255
+141,0,TERN,SAAEYB0022,Hincks Conservation Park,,Ben Sparrow,Orange,1,136.0188862,-33.83529583,,,147,184,230,255
+142,0,TERN,SAAEYB0023,Hincks Conservation Park,,Ben Sparrow,Orange,1,136.1473198,-33.81098671,,,147,184,230,255
+144,0,TERN,SAAEYB0031,Secret Rocks,,Ben Sparrow,Orange,1,136.9007118,-33.20810817,,,147,184,230,255
+145,0,TERN,SAAGAW0006,Bon Bon Station Reserve,,Ben Sparrow,Orange,1,135.547127,-30.533632,,,53,90,136,255
+156,0,TERN,SASMDD0014,Calperum Reserve,,Ben Sparrow,Orange,1,140.7054139,-34.03775833,,,147,184,230,255
+159,0,TERN,SATEYB0001,Mudla Wirra Reserve (Pengilly Scrub),,Ben Sparrow,Orange,1,138.7031889,-34.50430556,,,147,184,230,255
+165,0,TERN,SATKAN0003,Mount Billy Conservation Park,,Ben Sparrow,Orange,1,138.6040389,-35.46094167,,,147,184,230,255
+166,0,TERN,SATSTP0002,Vulkathunha-Gammon Ranges National Park,,Ben Sparrow,Orange,1,139.5473556,-30.65632778,,,147,184,230,255
+171,0,TERN,TCATNM0006,Not collected,,Ben Sparrow,Orange,1,147.5492618,-42.05240991,,,98,135,180,255
+172,0,TERN,TCFTSR0002,Warra Forest Reserve,,Ben Sparrow,Orange,1,146.6534,-43.0959,,,147,184,230,255
+174,0,TERN,VCAMDD0002,Murray Sunset National Park,,Ben Sparrow,Orange,1,141.6514833,-34.98229444,,,147,184,230,255
+175,0,TERN,VCAMDD0003,Murray Sunset National Park,,Ben Sparrow,Orange,1,141.7283611,-34.99829444,,,147,184,230,255
+176,0,TERN,WAAAVW0001,Unallocated Crown Land,,Ben Sparrow,Orange,1,118.9436306,-31.90223611,,,147,184,230,255
+177,0,TERN,WAACAR0001,Hamelin Station Reserve,,Ben Sparrow,Orange,1,114.3667124,-26.40814394,,,147,184,230,255
+178,0,TERN,WAACAR0002,Hamelin Station Reserve,,Ben Sparrow,Orange,1,114.27782,-26.48102,,,145,182,228,255
+180,1,TERN,WAACOO0016,Boorabbin National Park,,Ben Sparrow,Orange,1,120.3082167,-31.20321667,,,245,245,245,255
+181,1,TERN,WAACOO0017,Boorabbin National Park,,Ben Sparrow,Orange,1,120.3049306,-31.16963611,,,245,245,245,255
+183,0,TERN,WAACOO0027,Credo Conservation Park,,Ben Sparrow,Orange,1,120.6600417,-30.50148611,,,147,218,241,255
+184,0,TERN,WAACOO0029,Credo Conservation Park,,Ben Sparrow,Orange,1,120.6266833,-30.43289722,,,147,218,241,255
+185,1,TERN,WAACOO0031,Unallocated Crown Land,,Ben Sparrow,Orange,1,120.2574222,-30.68532222,,,245,245,245,255
+186,1,TERN,WAACOO0032,Unallocated Crown Land,,Ben Sparrow,Orange,1,120.3149361,-30.78853056,,,245,245,245,255
+192,0,TERN,WAAHAM0002,Mundrabilla Station,,Ben Sparrow,Orange,1,128.2373306,-31.88826111,,,147,184,230,255
+194,0,TERN,WAAJAF0003,Stirling Range National Park,,Ben Sparrow,Orange,1,117.687625,-34.40362778,,,147,184,230,255
+195,0,TERN,WAAMUR0001,Weebo Pastoral Lease,,Ben Sparrow,Orange,1,121.0137056,-28.06511111,,,147,184,230,255
+196,0,TERN,WAAMUR0002,Weebo Pastoral Lease,,Ben Sparrow,Orange,1,120.9661222,-28.143125,,,147,184,230,255
+197,0,TERN,WAAPIL0027,Roy Hill Station,,Ben Sparrow,Orange,1,119.7739778,-22.69156667,,,147,184,230,255
+198,0,TERN,WAAPIL0034,Not collected,,Ben Sparrow,Orange,1,120.2171194,-23.30198611,,,147,184,230,255
+199,0,TERN,WAAPIL0035,Not collected,,Ben Sparrow,Orange,1,120.3441556,-23.365975,,,147,184,230,255
+201,0,TERN,WAASWA0002,Lowlands Nature Reserve,,Ben Sparrow,Orange,1,115.9071639,-32.33515556,,,147,184,230,255
+203,0,TERN,WAAYAL0005,Edel Land National Park,,Ben Sparrow,Orange,1,113.3111487,-26.38997799,,,127,164,210,255

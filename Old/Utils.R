@@ -7,6 +7,16 @@ library(XML)
 library(xts)
 
 
+
+getProbeLocations <- function(){
+  
+  df <- read.csv('./Resources/sm_sites_working_nov2024.csv')
+  return(df)
+}
+
+
+
+
 getMaxDate <- function(smipsRoot){
   fls <- list.files(paste0(smipsRoot, '/totalbucket'), recursive = T, full.names = T)
   print(tail(fls))
