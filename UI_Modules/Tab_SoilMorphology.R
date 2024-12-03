@@ -14,7 +14,7 @@ Tab2_UI <- function() {
            HTML('<div style="margin-left: 20px; ">'),
            
            HTML('<H1>This page will show the soil description for the site and it would look something like below</H>
-                <p><img src="Images/SoilMorhology.png" alt="Dummy soil morphology screen" width="750" height="550"></p>'),
+                <p><img src="./Images/SoilMorhology.png" alt="Dummy soil morphology screen" width="750" height="550"></p>'),
  
            
            HTML('</div>') 
