@@ -18,12 +18,21 @@ library(dygraphs)
 library(leaflet)
 library(sf)
 
+
+machineName <- as.character(Sys.info()['nodename'])
+if (machineName=='soils-discover2') {
+  source('/APIs/SensorFederator2/Backends/ObjectStore.R')
+}else{
+  source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
+}
+
+
 source('Styles/headerLayout.R')
 source('UI_Modules/Tab_SoilMoistureMain.R')
 source('UI_Modules/Tab_SoilMorphology.R')
 source('UI_Modules/Tab_Admin.R')
 
-source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
+
 
 
 ######^^^ Get DB Data  ####
