@@ -14,6 +14,6 @@ Tab4_UI <- function() {
            HTML('<div style="margin-left: 20px; ">'),
            
            HTML('<H1>This page could show the current SMIPS Website - just a suggestion. Not convinced we would want to</H>
-                <p><img src="./Images/SMIPSDemo.png" alt="Dummy soil morphology screen" width="1250" height="650"></p>'),
+                <p><img src="Images/SMIPSDemo.png" alt="Dummy soil morphology screen" width="1250" height="650"></p>'),
            HTML('</div>') 
   )}
