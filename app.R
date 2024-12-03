@@ -208,8 +208,8 @@ server <- function(input, output, session) {
   })
   
 ####. #####
-####^^^ Soil Probes Main Page   ####
-####^^^^^ Probe Map  ########################################################################## 
+####^ Soil Probes Main Page   ####
+####^^ Probe Map  ########################################################################## 
   
    
   #####   Draw the main map 
@@ -225,7 +225,8 @@ server <- function(input, output, session) {
                 
               ')})
     
-    sid <- paste0(pts$Network, '$', pts$SiteName)
+    #sid <- paste0(pts$Network, '$', pts$SiteName)
+    sid <- paste0(pts$SiteID)
     
     leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
       setView(lng = 135, lat = -28, zoom = 3) %>%
@@ -243,10 +244,47 @@ server <- function(input, output, session) {
     if(p$id=="Selected"){
       proxy %>% removeMarker(layerId="Selected")
     } else {
-      
+      RV$CurrentSite <- p$id
+      print(RV$CurrentSite)
       proxy %>% setView(lng=p$lng, lat=p$lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(p$lng, p$lat)
     }
   })
+  
+  
+  ####^^ Render the Timeseries charts for the site  ##########################################################################   
+  observe({
+   
+    
+ })
+   
+   output$wgt_SMmain_rawTSChart <- renderDygraph({
+     
+     req(RV$CurrentSite)
+     smTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
+                                                       siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$SoilMoisture)
+     maxVal <- max(smTS)
+     
+     #dt <- as.Date(input$datePker)
+     dygraph(smTS,  group = 'Main') %>%
+       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+       dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
+      # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+   })
+   
+   output$wgt_SMmain_rainTSChart <- renderDygraph({
+     
+     req(RV$CurrentSite)
+     rainTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
+                                                         siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$Rainfall)
+     maxVal <- max(rainTS)
+     
+     #dt <- as.Date(input$datePker)
+     dygraph(rainTS,  group = 'Main') %>%
+       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+       dyAxis("y", label ='Rainfall', valueRange = c(0, maxVal))  #%>%
+     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+   })
+   
   
 }
 
