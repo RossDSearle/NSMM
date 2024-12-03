@@ -19,6 +19,8 @@ PageHeader_UI <- function() {
          National Soil Moisture Monitoring Network</span>
            
            </div>'
-  )
+  ),
+  ###  Adjust the width of the modal dialog
+  tags$style(HTML(".modal-dialog{ width:1200px}"))
   )
 }

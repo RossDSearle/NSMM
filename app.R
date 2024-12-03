@@ -1,18 +1,43 @@
+#### __________________________________________________  #########
+#####       Author : Ross Searle                             #####
+#####       Date :  Tue Dec  3 08:36:36 2024                 #####
+#####       Purpose : Shiny app to display National Soil     #####
+#####                 Moisture Monitoring project data       #####
+#####       Comments :                                       #####
+#### __________________________________________________  #########
+
+####. #############
+#### _____Insantiate the App___________ ####
+####. #################################################################################
+
 library(shiny)
 library(bslib)
 library(DT)
 library(rhandsontable)
+library(dygraphs)
+library(leaflet)
+library(sf)
 
 source('Styles/headerLayout.R')
-source('UI_Modules/Tab1.R')
-source('UI_Modules/Tab2.R')
+source('UI_Modules/Tab_SoilMoistureMain.R')
+source('UI_Modules/Tab_SoilMorphology.R')
 source('UI_Modules/Tab_Admin.R')
 
 source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
 
-dfn <- BE$Shared$Queries$doSelectQuery("select * from Networks")
 
-glbNetworks <<- dfn$Network
+######^^^ Get DB Data  ####
+glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
+glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+
+
+
+
+
+
+####.  #####
+#### _______ UI CODE ____________  #########
+####.  #####
 
 ui <- fluidPage(
 
@@ -29,11 +54,14 @@ ui <- fluidPage(
                       
 )
 
+
+####_______   SERVER CODE  ________   #########################################
 server <- function(input, output, session) {
   
 ####   Instantiate Reactive Valuse  ######  
   RV <- reactiveValues()
   RV$User <- NULL
+  RV$CurrentSite <- NULL
   RV$ShowReporting <- T
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
@@ -130,9 +158,12 @@ server <- function(input, output, session) {
       ))
     }
     
-    showModal(modalDialog(
+    showModal(
+
+       modalDialog(
       tags$h2(rec$SensorName),
-      plotOutput(outputId = 'wgt_Admin_SensorDetails_SensorTimeseries'),
+      dygraphOutput('wgt_Admin_SensorDetails_SensorTimeseries', width = "1150px", height = "350px"),
+      #plotOutput(outputId = 'wgt_Admin_SensorDetails_SensorTimeseries'),
       footer=tagList(
         modalButton('Close')
       )
@@ -143,11 +174,78 @@ server <- function(input, output, session) {
   })
   
   
-  output$wgt_Admin_SensorDetails_SensorTimeseries <- renderPlot({
+  # output$wgt_Admin_SensorDetails_SensorTimeseries <- renderPlot({
+  #   
+  #   rec <- RV$Admin_SensorSummaryTable_SelectedRow
+  #   ts <- BE$Shared$Queries$GetSensorDataAsTS(rec$sensorNum)
+  #   print(head(ts))
+  #   df <- data.frame(a=c(1,2,3,4), b=c(5,6,7,8))
+  #   plot(df)
+  #   
+  # })
+  
+  
+  output$wgt_Admin_SensorDetails_SensorTimeseries <- renderDygraph({
     
-    df <- data.frame(a=c(1,2,3,4), b=c(5,6,7,8))
-    plot(df)
     
+       rec <- RV$Admin_SensorSummaryTable_SelectedRow
+       ts <- BE$Shared$Queries$GetSensorDataAsTS(rec$sensorNum)
+       
+       dg <- dygraph(ts,  ylab =  'Values', group = 'Main') %>%
+         dyAxis("y", label ='Volumetric Moisture (mm)', valueRange = c(0, 100))
+       
+       dg
+    
+    # yr <- year(dt)
+    # isolate({
+    #   colnames(RV$currentRainTS)<-'Rain'
+    #   dygraph(RV$currentRainTS,  ylab = 'Rain (mm)', group = 'Main') %>% 
+    #     dyBarChart() %>% 
+    #     dyOptions(colors = 'blue', retainDateWindow = TRUE) %>% 
+    #     dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+    #     dyRangeSelector(dateWindow = c(paste0(yr, "-01-01"), paste0(2021, "-08-31")), height = 20)  
+    # })
+  })
+  
+####. #####
+####^^^ Soil Probes Main Page   ####
+####^^^^^ Probe Map  ########################################################################## 
+  
+   
+  #####   Draw the main map 
+  
+  output$wgt_SMmain_ProbeLocationeMap <- renderLeaflet({
+    pts <- st_as_sf(glbSites, coords = c("Longitude", "Latitude"), crs = 4326)
+    
+    labs <- lapply(seq(nrow(pts)), function(i) {
+      paste0( '<li>Network : ', pts[i, ]$Network, '</li>
+                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
+                  <li>Access : ', pts[i, ]$Access, '</li>
+                  <li>Install Date : <b>', pts[i, ]$InstallDate, '</b></li>
+                
+              ')})
+    
+    sid <- paste0(pts$Network, '$', pts$SiteName)
+    
+    leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
+      setView(lng = 135, lat = -28, zoom = 3) %>%
+      addProviderTiles("CartoDB.PositronOnlyLabels") %>%
+      addCircleMarkers(data=pts, radius=6, color="black", stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML))
+  })
+  
+  ####  default look for the selected site
+  acm_defaults <- function(map, x, y) addCircleMarkers(map, x, y, radius=6, color="black", fillColor="orange", fillOpacity=1, opacity=1, weight=2, stroke=TRUE, layerId="Selected")
+  
+  ####  Select a site
+  observeEvent(input$wgt_SMmain_ProbeLocationeMap_marker_click, { # update the map markers and view on map clicks
+    p <- input$wgt_SMmain_ProbeLocationeMap_marker_click
+    proxy <- leafletProxy("wgt_SMmain_ProbeLocationeMap")
+    if(p$id=="Selected"){
+      proxy %>% removeMarker(layerId="Selected")
+    } else {
+      
+      proxy %>% setView(lng=p$lng, lat=p$lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(p$lng, p$lat)
+    }
   })
   
 }
