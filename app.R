@@ -21,7 +21,7 @@ library(sf)
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='soils-discover2') {
-  source('/APIs/SensorFederator2/Backends/ObjectStore.R')
+  source('/srv/plumber/SensorFederator2/Backends/ObjectStore.R')
 }else{
   source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
 }
