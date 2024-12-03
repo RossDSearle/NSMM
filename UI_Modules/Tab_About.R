@@ -21,7 +21,7 @@ Tab3_UI <- function() {
            HTML('<div style="margin-left: 20px; ">'),
            
            tabPanel("About", "",
-                    includeHTML2(paste0( "www/StaticPages/About.html"))
+                    includeHTML2(paste0( "www/StaticPages/about.html"))
            ),
  
            
