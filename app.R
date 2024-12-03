@@ -71,7 +71,7 @@ server <- function(input, output, session) {
   RV <- reactiveValues()
   RV$User <- NULL
   RV$CurrentSite <- NULL
-  RV$ShowReporting <- T
+  RV$ShowReporting <- F
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
   
@@ -80,7 +80,6 @@ server <- function(input, output, session) {
     query <- parseQueryString(session$clientData$url_search)
     if (!is.null(query[['usr']])) {
       RV$User <- query[['usr']]
-      print(RV$User)
     }
   })
 
@@ -90,6 +89,8 @@ server <- function(input, output, session) {
     req(RV$User)
     if(RV$User=='Admin'){
         RV$ShowReporting <- T
+    }else{
+      RV$ShowReporting <- F
     }
   })
   
