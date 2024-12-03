@@ -16,12 +16,15 @@ Tab1_UI <- function() {
              
              sidebarLayout(
                sidebarPanel( width = 3,
+                             HTML('Click on a location in the map to view its data'),
                              leafletOutput("wgt_SMmain_ProbeLocationeMap", width = 350, height = 350),
+                             
+                             HTML("<BR>Stuff below doesn't work yet"),
                              selectInput("wgt_SMmain_Network", "Network", choices=NULL, width = 250),
                              selectInput("wgt_SMmain_ProbeName", "Probe ", choices=NULL, width = 250),
-                             helpText("Select map date below"), 
-                             sliderInput("wgt_SMmain_datePker", "Dates:", min = as.Date("2017-01-01","%Y-%m-%d"), max = as.Date("2021-09-01","%Y-%m-%d"), value=as.Date("2021-07-01"), timeFormat="%Y-%m-%d",
-                                         animate = animationOptions(interval = 300, loop = TRUE)),
+                           #  helpText("Select map date below"), 
+                          #   sliderInput("wgt_SMmain_datePker", "Dates:", min = as.Date("2017-01-01","%Y-%m-%d"), max = as.Date("2021-09-01","%Y-%m-%d"), value=as.Date("2021-07-01"), timeFormat="%Y-%m-%d",
+                          #               animate = animationOptions(interval = 300, loop = TRUE)),
                             # sliderInput("tempCor", "Temp Correction:", min = 0, max = 0.5, value=0.3),
                              
                              HTML('<BR><BR><BR><BR><BR><BR>')

@@ -30,6 +30,8 @@ if (machineName=='soils-discover2') {
 source('Styles/headerLayout.R')
 source('UI_Modules/Tab_SoilMoistureMain.R')
 source('UI_Modules/Tab_SoilMorphology.R')
+source('UI_Modules/Tab_SMIPS.R')
+source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 
 
@@ -58,6 +60,8 @@ ui <- fluidPage(
              
             Tab1_UI(),
             Tab2_UI(),
+            Tab4_UI(),
+            Tab3_UI(),
             Tab_Admin_UI(),
   )
                       

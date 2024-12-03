@@ -13,7 +13,8 @@ Tab2_UI <- function() {
   tabPanel("Soil Description",  icon = icon("file-lines", tags$style()),
            HTML('<div style="margin-left: 20px; ">'),
            
-           HTML('<H1>This page will show the soil description for the site</H>'),
+           HTML('<H1>This page will show the soil description for the site and it would look something like below</H>
+                <p><img src="images/SoilMorhology.png" alt="Dummy soil morphology screen" width="750" height="550"></p>'),
  
            
            HTML('</div>') 

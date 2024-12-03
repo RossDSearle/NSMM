@@ -10,7 +10,7 @@ Tab_Admin_UI <- function() {
   
   ns <- NS('Tab3')
   
-  tabPanel("Admin",  icon = icon("file-lines", tags$style()),
+  tabPanel("Admin",  icon = icon("toolbox", tags$style()),
            HTML('<div style="margin-left: 20px; ">'),
   
           tabsetPanel(
