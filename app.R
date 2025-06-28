@@ -17,12 +17,17 @@ library(rhandsontable)
 library(dygraphs)
 library(leaflet)
 library(sf)
+library(reactable)
 
+
+
+# setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/app.R'
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='soils-discover2') {
   source('/srv/plumber/SensorFederator2/Backends/ObjectStore.R')
 }else{
+  setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2'
   source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
 }
 
@@ -100,9 +105,10 @@ server <- function(input, output, session) {
   
   observe({
     if(RV$ShowReporting){
+      
       showTab(inputId = "mainTabset", target = "Admin")
     }else{
-      hideTab(inputId = "mainTabset", target = "Admin")
+     # hideTab(inputId = "mainTabset", target = "Admin")
     }
   })
   
@@ -298,6 +304,75 @@ server <- function(input, output, session) {
        dyAxis("y", label ='Rainfall', valueRange = c(0, maxVal))  #%>%
      # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
    })
+   
+   
+###. ####   
+### ^ -----  Admin Tab  ------ ####   
+### ^^ Render Networks Table  ####   
+   
+   output$wgtAdminNetworksTable <- renderReactable({
+     Admin_NetworksTable()
+   })
+     
+   observe({
+     selected <- getReactableState("wgtAdminNetworksTable", "selected")
+     print(selected)
+   })
+   
+ output$wgtNetworkSummaryListView <- renderJsonedit({
+   
+   df <-  BE$Shared$Queries$SensorInfo()
+   
+   print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
+   
+   lastPing <- Sys.time() - df$MaxDate
+   df$Online <- lastPing<=5 
+   
+   s <- list()
+   
+   nets <- unique(df$Network)
+   sites <- unique(df$SiteName)
+   
+   s$NumberOfNetworks <- length(unique(nets))
+   s$NumberOfSites <- length(sites)
+   s$NumberOfSensors <- length(unique(df$SensorName))
+   s$NumberOfRecords = sum(df$Count)
+   
+   networkList <- vector(mode='list', length=length(nets))
+   sitenames <- unique(nets)
+   names(networkList) <- nets
+   
+   for (i in 1:length(nets)) {
+     
+     sdf <- df[df$Network==nets[i],]
+     
+     idxs <- which(sdf$SiteName=='')
+     if(length(idxs)>0){
+       sdf$SiteName[idxs] <- 'unknown'
+     }
+     SiteList <- vector(mode='list', length=length(unique(sdf$SiteName)))
+     sitenames <- unique(sdf$SiteName)
+     names(SiteList) <- sitenames
+     
+     for (j in 1:length(sitenames)) {
+       
+       sendf <- df[df$Network==nets[i] & df$SiteName==sitenames[j],]
+       SensorList <- vector(mode='list', length=(nrow(sendf)))
+       Sensornames <- unique(sendf$SensorName)
+       names(SensorList) <- Sensornames
+       
+       sensors <- sendf$SensorName
+       cnt <- sendf$Count
+       SiteList[[j]]$sensors <- paste0(sensors, ' : Count=', cnt, ' : Online=', sendf$Online, ' : StartDate=', sendf$MinDate, ' : EndDate=', sendf$MaxDate)
+     }
+     networkList[[i]]$Sites <- SiteList
+   }
+   
+   s$Networks <- networkList
+   
+   jsonedit(s)
+ })
+     
    
   
 }

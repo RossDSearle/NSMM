@@ -48,9 +48,16 @@ Tab_Admin_UI <- function() {
                       ),
                       
                       #fluidRow( DTOutput('wgt_Admin_SensorSummaryTable'))
-                      fluidRow(  rHandsontableOutput('wgt_Admin_SensorSummaryTable', width = 1500, height = 500))
+                      #fluidRow(  rHandsontableOutput('wgt_Admin_SensorSummaryTable', width = 1500, height = 500))
+                      
+                      
+                      HTML("<H3 style='color:orange;font-weight:700'>Networks</H3>"), 
+                      reactableOutput("wgtAdminNetworksTable")
+                     
+                      
+                      
              ),    
-
+             tabPanel("Sensor Status - TreeView", listviewer::jsoneditOutput('wgtNetworkSummaryListView') ),
              tabPanel("Site Map - Sensor Status", tableOutput("table"))
            ),
  
