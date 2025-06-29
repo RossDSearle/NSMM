@@ -321,54 +321,7 @@ server <- function(input, output, session) {
    
  output$wgtNetworkSummaryListView <- renderJsonedit({
    
-   df <-  BE$Shared$Queries$SensorInfo()
-   
-   print('KKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKKK')
-   
-   lastPing <- Sys.time() - df$MaxDate
-   df$Online <- lastPing<=5 
-   
-   s <- list()
-   
-   nets <- unique(df$Network)
-   sites <- unique(df$SiteName)
-   
-   s$NumberOfNetworks <- length(unique(nets))
-   s$NumberOfSites <- length(sites)
-   s$NumberOfSensors <- length(unique(df$SensorName))
-   s$NumberOfRecords = sum(df$Count)
-   
-   networkList <- vector(mode='list', length=length(nets))
-   sitenames <- unique(nets)
-   names(networkList) <- nets
-   
-   for (i in 1:length(nets)) {
-     
-     sdf <- df[df$Network==nets[i],]
-     
-     idxs <- which(sdf$SiteName=='')
-     if(length(idxs)>0){
-       sdf$SiteName[idxs] <- 'unknown'
-     }
-     SiteList <- vector(mode='list', length=length(unique(sdf$SiteName)))
-     sitenames <- unique(sdf$SiteName)
-     names(SiteList) <- sitenames
-     
-     for (j in 1:length(sitenames)) {
-       
-       sendf <- df[df$Network==nets[i] & df$SiteName==sitenames[j],]
-       SensorList <- vector(mode='list', length=(nrow(sendf)))
-       Sensornames <- unique(sendf$SensorName)
-       names(SensorList) <- Sensornames
-       
-       sensors <- sendf$SensorName
-       cnt <- sendf$Count
-       SiteList[[j]]$sensors <- paste0(sensors, ' : Count=', cnt, ' : Online=', sendf$Online, ' : StartDate=', sendf$MinDate, ' : EndDate=', sendf$MaxDate)
-     }
-     networkList[[i]]$Sites <- SiteList
-   }
-   
-   s$Networks <- networkList
+   s <- BE$Admin$generateDBSummary()
    
    jsonedit(s)
  })
