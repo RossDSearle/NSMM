@@ -42,7 +42,9 @@ Admin_SensorsTable <- function(df){
 ot <-  reactable(
   df,
   compact = TRUE, defaultPageSize = 20,showPagination = T, showPageInfo = T, sortable = T,  filterable = TRUE, resizable = TRUE, 
-  selection = "multiple", onClick = "select",
+  selection = "multiple", onClick = "select", showPageSizeOptions = TRUE,
+  pageSizeOptions = c(10, 20, 50, 100, 100000),
+
   
   striped = TRUE,
   highlight = TRUE,

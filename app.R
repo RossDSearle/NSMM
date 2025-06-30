@@ -338,10 +338,9 @@ server <- function(input, output, session) {
    
    output$wgtAdmin_SensorChart <- renderDygraph({
      
-     req(RV$CurrentSite)
-     smTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
-                                                       siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$SoilMoisture)
-     maxVal <- max(smTS)
+     smTS <- BE$Shared$SensorData$getSensorDataFromDB(sensorID='NSMM_00DD_Soil-Temperature_8')
+     
+    maxVal <- max(smTS)
      
      #dt <- as.Date(input$datePker)
      dygraph(smTS,  group = 'Main') %>%
