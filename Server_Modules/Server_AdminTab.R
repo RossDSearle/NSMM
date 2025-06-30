@@ -1,7 +1,23 @@
 
-Admin_NetworksTable <- function(){
 
-  df <- BE$Shared$Queries$SensorInfo()
+Admin_HarvestLogTable <- function(){
+  
+  df <- BE$Shared$Queries$HarvestLogTable()
+  ot <-  reactable(df)
+  
+}
+
+
+
+
+Admin_SensorsTable <- function(df){
+
+   req( df)
+  # df <-  RV$CurrentSensorSummaryTable 
+  
+ # df <- BE$Shared$Queries$SensorInfo()
+  
+  
   lastPing <- Sys.time() - df$MaxDate
   df$Online <- lastPing<=5 
   
@@ -26,7 +42,7 @@ Admin_NetworksTable <- function(){
 ot <-  reactable(
   df,
   compact = TRUE, defaultPageSize = 20,showPagination = T, showPageInfo = T, sortable = T,  filterable = TRUE, resizable = TRUE, 
-  selection = "single", onClick = "select",
+  selection = "multiple", onClick = "select",
   
   striped = TRUE,
   highlight = TRUE,

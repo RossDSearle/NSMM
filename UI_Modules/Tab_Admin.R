@@ -19,26 +19,34 @@ Tab_Admin_UI <- function() {
                       
                       fluidRow(HTML('<H4> Filter sensor summary by</h4>')),
                       fluidRow(
-                        HTML(paste0('<div style="min-width:80px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
-                                    <span style="vertical-align: -8px;">Datatype</span></div>')),
-                        HTML(paste0('<div style="max-width:200px;  float:left; display: inline;"><span> ', 
-                             selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterDatatype', label=NULL, choices = c('None', BE$Shared$Constants$knownFeatures)),
-                                  '</span></div>')),
+                        
                         
                         HTML(paste0('<div style="min-width:80px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
                                     <span style="vertical-align: -8px;">Network</span></div>')),
                         HTML(paste0('<div style="max-width:200px;  float:left; display: inline;"><span>', 
-                                    selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterNetwork', label=NULL, choices = c('None', glbNetworks)),
+                                    selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterNetwork', label=NULL, choices = c('All', glbNetworks$Network)),
                                     '</span></div>')),
+                        
                         
                         HTML(paste0('<div style="min-width:80px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
-                                    <span style="vertical-align: -8px;">Is Active</span></div>')),
+                                    <span style="vertical-align: -8px;">Site</span></div>')),
                         HTML(paste0('<div style="max-width:200px;  float:left; display: inline;"><span>', 
-                                    selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterIsActive', label=NULL, choices = c('None', 'TRUE', 'FALSE')),
+                                    selectInput(inputId = 'wgt_Admin_SensorSummaryTable_SiteName', label=NULL, choices = NULL),
                                     '</span></div>')),
                         
+                        
+                        
+                        HTML(paste0('<div style="min-width:80px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
+                                    <span style="vertical-align: -8px;">Datatype</span></div>')),
+                        HTML(paste0('<div style="max-width:200px;  float:left; display: inline;"><span> ', 
+                             selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterDatatype', label=NULL, choices = c('All', BE$Shared$Constants$knownFeatures)),
+                                  '</span></div>')),
+                        
+                       
+                        
+                       
                         HTML(paste0('<div style="min-width:200px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
-                                    <span style="vertical-align: -8px;">', actionButton(inputId='wgt_Admin_SensorSummaryTable_ShowButton', label='Show Sensor Summary'),
+                                    <span style="vertical-align: -8px;">', actionButton(inputId='wgt_Admin_SensorSummaryTable_ShowButton', label='Show Sensor Info'),
                                     '</span></div>')), 
                         
                         HTML(paste0('<div style="min-width:200px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
@@ -51,13 +59,16 @@ Tab_Admin_UI <- function() {
                       #fluidRow(  rHandsontableOutput('wgt_Admin_SensorSummaryTable', width = 1500, height = 500))
                       
                       
-                      HTML("<H3 style='color:orange;font-weight:700'>Networks</H3>"), 
-                      reactableOutput("wgtAdminNetworksTable")
+                      HTML("<H3 style='color:orange;font-weight:700'>Sensors</H3>"), 
+                      reactableOutput("wgtAdminNetworksTable"),
+                      
+                      fluidRow( column(12, dygraphOutput("wgtAdmin_SensorChart", height = "200px"))),
                      
                       
                       
              ),    
              tabPanel("Sensor Status - TreeView", listviewer::jsoneditOutput('wgtNetworkSummaryListView') ),
+             tabPanel("Harvest Logs", reactableOutput("wgtAdminHarvestLogTable") ),
              tabPanel("Site Map - Sensor Status", tableOutput("table"))
            ),
  

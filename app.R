@@ -38,6 +38,7 @@ source('UI_Modules/Tab_SoilMorphology.R')
 source('UI_Modules/Tab_SMIPS.R')
 source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
+source('Server_Modules/Server_AdminTab.R')
 
 
 
@@ -113,35 +114,7 @@ server <- function(input, output, session) {
   })
   
   
-  observeEvent(input$wgt_Admin_SensorSummaryTable_ShowButton, {
-    # RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummaryFromLiveData()
-    
-    r <- list()
-    if(input$wgt_Admin_SensorSummaryTable_FilterDatatype != 'None'){
-      r$DataType = input$wgt_Admin_SensorSummaryTable_FilterDatatype
-    }
-    if(input$wgt_Admin_SensorSummaryTable_FilterNetwork != 'None'){
-      r$Network = input$wgt_Admin_SensorSummaryTable_FilterNetwork
-    }
-    if(input$wgt_Admin_SensorSummaryTable_FilterIsActive!= 'None'){
-      r$IsActive = input$wgt_Admin_SensorSummaryTable_FilterIsActive
-    }
 
-    filt <- NULL
-    if(length(r) > 0){
-     filt <- paste0( names(r)[1], " = '", r[[1]], "' " )
-    }
-    if(length(r) > 1){
-      for (z in 2:length(r)) {
-        filt <- paste0(filt, ' and ', names(r)[z], " = '", r[[z]], "' " )
-      }
-     
-    }
-    
-    RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummary(filter = filt)
-   
-  })
-  
   
   output$wgt_Admin_SensorSummaryTable = renderRHandsontable({
     req( RV$CurrentSensorSummaryTable)
@@ -308,10 +281,10 @@ server <- function(input, output, session) {
    
 ###. ####   
 ### ^ -----  Admin Tab  ------ ####   
-### ^^ Render Networks Table  ####   
+### ^^ Render Sensors Table  ####   
    
    output$wgtAdminNetworksTable <- renderReactable({
-     Admin_NetworksTable()
+     Admin_SensorsTable(df=RV$CurrentSensorSummaryTable )
    })
      
    observe({
@@ -319,12 +292,78 @@ server <- function(input, output, session) {
      print(selected)
    })
    
+   observe({
+     req(input$wgt_Admin_SensorSummaryTable_FilterNetwork)
+     sql <- paste0("Select SiteName from Sites where Network = '", input$wgt_Admin_SensorSummaryTable_FilterNetwork, "'")
+     chcs <- BE$Shared$Queries$doSelectQuery(sql)
+     updateSelectInput(session = session, inputId = 'wgt_Admin_SensorSummaryTable_SiteName', choices = c('All', chcs ))
+   })
+   
+   
+   observeEvent(input$wgt_Admin_SensorSummaryTable_ShowButton, {
+     # RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummaryFromLiveData()
+     
+     r <- list()
+     if(input$wgt_Admin_SensorSummaryTable_FilterDatatype != 'All'){
+       r$Sensors.DataType = input$wgt_Admin_SensorSummaryTable_FilterDatatype
+     }
+     if(input$wgt_Admin_SensorSummaryTable_FilterNetwork != 'All'){
+       r$Networks.Network = input$wgt_Admin_SensorSummaryTable_FilterNetwork
+     }
+     if(input$wgt_Admin_SensorSummaryTable_SiteName != 'All'){
+       r$Sites.SiteName= input$wgt_Admin_SensorSummaryTable_SiteName
+     }
+     
+     filt <- NULL
+     if(length(r) > 0){
+       if(r[1] != 'All'){
+          filt <- paste0( names(r)[1], " = '", r[[1]], "' " )
+       }
+     }
+     if(length(r) > 1){
+       for (z in 2:length(r)) {
+         if(r[z] != 'All'){
+         filt <- paste0(filt, ' and ', names(r)[z], " = '", r[[z]], "' " )
+         }
+       }
+       
+     }
+     
+     print(r)
+     
+     RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummary(filter = filt)
+     print(nrow(RV$CurrentSensorSummaryTable))
+     
+   })
+   
+   output$wgtAdmin_SensorChart <- renderDygraph({
+     
+     req(RV$CurrentSite)
+     smTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
+                                                       siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$SoilMoisture)
+     maxVal <- max(smTS)
+     
+     #dt <- as.Date(input$datePker)
+     dygraph(smTS,  group = 'Main') %>%
+       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+       dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
+     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+   })
+   
+   
  output$wgtNetworkSummaryListView <- renderJsonedit({
    
    s <- BE$Admin$generateDBSummary()
    
    jsonedit(s)
  })
+ 
+ output$wgtAdminHarvestLogTable <- renderReactable({
+
+   Admin_HarvestLogTable()
+ })
+ 
+ 
      
    
   
