@@ -18,6 +18,7 @@ library(dygraphs)
 library(leaflet)
 library(sf)
 library(reactable)
+library(shinyjs)
 
 
 
@@ -46,7 +47,7 @@ source('Server_Modules/Server_AdminTab.R')
 ######^^^ Get DB Data  ####
 glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
 glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
-
+SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 
 
 
@@ -59,6 +60,8 @@ glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
 ui <- fluidPage(
 
   PageHeader_UI(),
+  
+  useShinyjs(),
 
   navbarPage("", id = "mainTabset", 
 
@@ -84,6 +87,7 @@ server <- function(input, output, session) {
   RV$ShowReporting <- F
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
+  RV$CanPlotAdminSensors <- F
   
 ####  Read URL Parameters  #######  
   observe({
@@ -116,55 +120,31 @@ server <- function(input, output, session) {
   
 
   
-  output$wgt_Admin_SensorSummaryTable = renderRHandsontable({
-    req( RV$CurrentSensorSummaryTable)
-    df <- RV$CurrentSensorSummaryTable
-    
-    row_highlight <- which(df$IsActive=='FALSE')
-         rhandsontable( df, selectCallback = TRUE,  manualColumnResize = T, readOnly = TRUE, rowHeaders = F,
-                        
-                        afterDeselect = htmlwidgets::JS(
-                          "function() {Shiny.onInputChange('wgtDisplayTimeTable_select', null);
-                   }"
-                        )) %>%
-           hot_cols(columnSorting = TRUE)
-  })
+  # output$wgt_Admin_SensorSummaryTable = renderRHandsontable({
+  #   req( RV$CurrentSensorSummaryTable)
+  #   df <- RV$CurrentSensorSummaryTable
+  #   
+  #   row_highlight <- which(df$IsActive=='FALSE')
+  #        rhandsontable( df, selectCallback = TRUE,  manualColumnResize = T, readOnly = TRUE, rowHeaders = F,
+  #                       
+  #                       afterDeselect = htmlwidgets::JS(
+  #                         "function() {Shiny.onInputChange('wgtDisplayTimeTable_select', null);
+  #                  }"
+  #                       )) %>%
+  #          hot_cols(columnSorting = TRUE)
+  # })
+  # 
+  # observe({
+  #   req( input$wgt_Admin_SensorSummaryTable_select$select$r)
+  #   sid <- input$wgt_Admin_SensorSummaryTable_select$select$r
+  #  print(sid)
+  #  rec <- RV$CurrentSensorSummaryTable[sid, ]
+  #  print(rec)
+  #  RV$Admin_SensorSummaryTable_SelectedRow <- rec
+  # })
   
-  observe({
-    req( input$wgt_Admin_SensorSummaryTable_select$select$r)
-    sid <- input$wgt_Admin_SensorSummaryTable_select$select$r
-   print(sid)
-   rec <- RV$CurrentSensorSummaryTable[sid, ]
-   print(rec)
-   RV$Admin_SensorSummaryTable_SelectedRow <- rec
-  })
   
-  
-  observeEvent(input$wgt_Admin_SensorSummaryTable_ShowTimeseries, {
-    
-    rec <- RV$Admin_SensorSummaryTable_SelectedRow
-    
-    if(is.null(rec)){
-      showModal(modalDialog(
-        title = "Timeseries Viewer",
-        "Please select sensor record in the table to view"
-      ))
-    }
-    
-    showModal(
-
-       modalDialog(
-      tags$h2(rec$SensorName),
-      dygraphOutput('wgt_Admin_SensorDetails_SensorTimeseries', width = "1150px", height = "350px"),
-      #plotOutput(outputId = 'wgt_Admin_SensorDetails_SensorTimeseries'),
-      footer=tagList(
-        modalButton('Close')
-      )
-    ))
-    
-    
-    
-  })
+ 
   
   
   # output$wgt_Admin_SensorDetails_SensorTimeseries <- renderPlot({
@@ -280,26 +260,25 @@ server <- function(input, output, session) {
    
    
 ###. ####   
-### ^ -----  Admin Tab  ------ ####   
-### ^^ Render Sensors Table  ####   
+### ^ -----  Admin Tab  ------ ####  
+###. #### 
+### ^^ Admin Sensor Map Sub Tab Table  #### 
+### ^^^^ Render Sensors Summary Table  ####   
    
    output$wgtAdminNetworksTable <- renderReactable({
      Admin_SensorsTable(df=RV$CurrentSensorSummaryTable )
    })
      
-   observe({
-     selected <- getReactableState("wgtAdminNetworksTable", "selected")
-     print(selected)
-   })
-   
+###  ^^^^ Update SiteName combo box choices   ####   
    observe({
      req(input$wgt_Admin_SensorSummaryTable_FilterNetwork)
-     sql <- paste0("Select SiteName from Sites where Network = '", input$wgt_Admin_SensorSummaryTable_FilterNetwork, "'")
+     sql <- paste0("Select SiteName from Sites where Network = '", input$wgt_Admin_SensorSummaryTable_FilterNetwork, "' order by SiteName ASC")
      chcs <- BE$Shared$Queries$doSelectQuery(sql)
-     updateSelectInput(session = session, inputId = 'wgt_Admin_SensorSummaryTable_SiteName', choices = c('All', chcs ))
+     updateSelectInput(session = session, inputId = 'wgt_Admin_SensorSummaryTable_SiteName', choices = c('All', chcs$SiteName ))
    })
    
-   
+
+###  ^^^^ Get filtered Sensor Info from DB   ####      
    observeEvent(input$wgt_Admin_SensorSummaryTable_ShowButton, {
      # RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummaryFromLiveData()
      
@@ -329,24 +308,62 @@ server <- function(input, output, session) {
        
      }
      
-     print(r)
+     if(length(r) ==3){
+       shinyjs::show('wgtButton_Admin_SensorSummaryTable_ShowTimeseries')
+       RV$CanPlotAdminSensors <- T
+     }else{
+       shinyjs::hide('wgtButton_Admin_SensorSummaryTable_ShowTimeseries')
+       RV$CanPlotAdminSensors <- F
+     }
+     
+     print(filt)
      
      RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummary(filter = filt)
      print(nrow(RV$CurrentSensorSummaryTable))
      
    })
    
+   
+###  ^^^^ Render Sensor data for select site   ####   
    output$wgtAdmin_SensorChart <- renderDygraph({
      
-     smTS <- BE$Shared$SensorData$getSensorDataFromDB(sensorID='NSMM_00DD_Soil-Temperature_8')
+     req( RV$CanPlotAdminSensors)
      
-    maxVal <- max(smTS)
+     if( RV$CanPlotAdminSensors){
+       
+       
+       smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(RV$CurrentSensorSummaryTable)
+       print(smTS)
+       maxVal <- max(smTS)
+       
+       dygraph(smTS,  group = 'Main') %>%
+         dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+         dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
+       
+     }
      
-     #dt <- as.Date(input$datePker)
-     dygraph(smTS,  group = 'Main') %>%
-       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-       dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
-     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+    
+   })
+   
+###  ^^^^ Popup modal dialog for TS Charts  ####      
+   observeEvent(input$wgtButton_Admin_SensorSummaryTable_ShowTimeseries, {
+     
+     req( RV$CanPlotAdminSensors)
+     
+     if( RV$CanPlotAdminSensors){
+     
+     showModal(
+       
+       modalDialog(
+         tags$h2(paste0(RV$CurrentSensorSummaryTable$SiteName[1], ' : ', RV$CurrentSensorSummaryTable$DataType[1])),
+         dygraphOutput('wgtAdmin_SensorChart', width = "1150px", height = "350px"),
+         footer=tagList(
+           modalButton('Close')
+         )
+       ))
+     
+     }
+     
    })
    
    
@@ -360,6 +377,60 @@ server <- function(input, output, session) {
  output$wgtAdminHarvestLogTable <- renderReactable({
 
    Admin_HarvestLogTable()
+ })
+ 
+ 
+###. ####   
+### ^^ Admin Map Sub Tab  ####
+##### ^^^^   Draw the Admin Site Map  ####
+ 
+ output$wgt_Admin_ProbeLocationsMap <- renderLeaflet({
+  
+   leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
+     setView(lng = 135, lat = -28, zoom = 3) %>%
+     addProviderTiles("CartoDB.PositronOnlyLabels")
+ })
+ 
+ observe({
+   req(input$wgtAdminMapViewType)
+   
+   mt <- input$wgtAdminMapViewType
+   if(mt=='Online'){
+     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
+     
+     pcol<-colorFactor(palette = "viridis", tbl$Depth)
+   }else if(mt=='Network'){
+     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
+     
+     pcol<-colorFactor(palette = "magma", tbl$Network)
+   }
+   
+   print(tbl)
+   
+   # networks <- BE$Shared$SensorData$getAllNetworkInfo()
+   # spcol<-colorFactor(palette = "viridis", networks$Network)
+   # 
+   # sites <- BE$Shared$SensorData$getAllSiteInfo()
+   pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
+   # 
+   # labs <- lapply(seq(nrow(pts)), function(i) {
+   #   paste0( '<li>Network : ', pts[i, ]$Network, '</li>
+   #                <li>Site Name : ', pts[i, ]$SiteName, '</li>
+   #                 <li>Access : ', pts[i, ]$Access, '</li>
+   #                 <li>Install Date : <b>', pts[i, ]$InstallDate, '</b></li>
+   #                 
+   #            ')})
+   labs <- 'test'
+   
+   #sid <- paste0(pts$Network, '$', pts$SiteName)
+  # sid <- paste0(pts$SiteID)
+   
+   proxy <- leafletProxy("wgt_Admin_ProbeLocationsMap")
+   proxy %>% clearMarkers()
+   proxy %>%  clearControls()
+  # proxy %>%  addCircleMarkers(data=pts, radius=6,  color = spcol(sites$Network), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML))
+   proxy %>%  addCircleMarkers(data=pts, radius=6,  color = pcol, stroke=FALSE, fillOpacity=1, group="locations", layerId = ~SiteName, label=lapply(labs, HTML))
+   
  })
  
  
