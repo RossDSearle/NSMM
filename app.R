@@ -46,8 +46,9 @@ source('Server_Modules/Server_AdminTab.R')
 
 
 ######^^^ Get DB Data  ####
-#glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
-#glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
+glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+glbHarvestDates <- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
 SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 
 
@@ -375,10 +376,6 @@ server <- function(input, output, session) {
    jsonedit(s)
  })
  
- output$wgtAdminHarvestLogTable <- renderReactable({
-
-   Admin_HarvestLogTable()
- })
  
  
 ###. ####   
@@ -466,7 +463,21 @@ server <- function(input, output, session) {
  })
  
  
-     
+ 
+###.#### 
+#####^^   Admin Harvest Sub Tab ####
+ 
+ output$wgtAdminHarvestLogTable <- renderReactable({
+   req(input$wgtAdminHarvestLogDates)
+   Admin_HarvestLogTable(input$wgtAdminHarvestLogDates)
+ })
+ 
+ 
+ output$wgtHarvestSummaryHTML  <- renderUI({
+   
+  HTML( '<p1><B>HarvestSummary</B></p1>')
+   
+ })
    
   
 }

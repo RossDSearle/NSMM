@@ -1,8 +1,8 @@
 
 
-Admin_HarvestLogTable <- function(){
+Admin_HarvestLogTable <- function(dt){
   
-  df <- BE$Shared$Queries$HarvestLogTable()
+  df <- BE$Shared$Queries$HarvestLogTable(dt)
   ot <-  reactable(df)
   
 }

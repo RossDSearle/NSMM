@@ -70,10 +70,14 @@ Tab_Admin_UI <- function() {
                       
              ),    
              tabPanel("Sensor Status - TreeView", listviewer::jsoneditOutput('wgtNetworkSummaryListView') ),
-             tabPanel("Harvest Logs", reactableOutput("wgtAdminHarvestLogTable") ),
+             
              tabPanel("Site Map - Sensor Status", 
                       selectInput(inputId =  'wgtAdminMapViewType',label = 'ViewType',choices = c('Network', 'Depth', 'Length of Record', 'Latest Surface Moisture', 'All Active', 'Quality Index'), selected = 'Length of Record'),
-                      leafletOutput(outputId = 'wgt_Admin_ProbeLocationsMap', height = 700, width = 1000))
+                      leafletOutput(outputId = 'wgt_Admin_ProbeLocationsMap', height = 700, width = 1000)),
+             tabPanel("Harvest Logs", 
+                      selectInput(inputId =  'wgtAdminHarvestLogDates',label = 'Harvest Log Dates', choices = glbHarvestDates$DT, selected = glbHarvestDates[1,1]),
+                      htmlOutput('wgtHarvestSummaryHTML'),
+                      reactableOutput("wgtAdminHarvestLogTable") )
            ),
  
            
