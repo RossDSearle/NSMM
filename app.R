@@ -48,7 +48,7 @@ source('Server_Modules/Server_AdminTab.R')
 ######^^^ Get DB Data  ####
 glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
 glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
-glbHarvestDates <- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
+glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
 SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 
 

@@ -3,7 +3,20 @@
 Admin_HarvestLogTable <- function(dt){
   
   df <- BE$Shared$Queries$HarvestLogTable(dt)
-  ot <-  reactable(df)
+  
+  
+  data <- df[,-1]
+  
+ ot <- reactable(
+    data,
+    groupBy = c('Network', "SiteName"),
+    columns = list(
+      NumRecs = colDef(aggregate = "sum")
+    )
+  )
+  
+ot  
+
   
 }
 
