@@ -4,7 +4,7 @@
 
 
 
-  if(mt=='Online'){
+  if(mt=='Depth'){
     param <- 'Depth'
     legTitle = 'Max Sensor Depth'
     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
@@ -16,7 +16,7 @@
     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
     pcol<-colorFactor(palette = "magma", tbl$Network)
   }
-  else if(mt=='Length'){
+  else if(mt=='Length of Record'){
     param <- 'Length'
     legTitle = 'Duration'
     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Length=max(Count))
@@ -26,6 +26,13 @@
   pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
 
   labs <- 'test'
+  
+  
+  param <- 'Network'
+  legTitle = 'Network'
+  tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
+  pcol<-colorFactor(palette = "viridis", tbl$Network)
+  
   
   leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
     setView(lng = 135, lat = -28, zoom = 3) %>%

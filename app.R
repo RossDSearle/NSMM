@@ -19,6 +19,7 @@ library(leaflet)
 library(sf)
 library(reactable)
 library(shinyjs)
+library(dplyr)
 
 
 
@@ -45,8 +46,8 @@ source('Server_Modules/Server_AdminTab.R')
 
 
 ######^^^ Get DB Data  ####
-glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
-glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+#glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
+#glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
 SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 
 
@@ -387,49 +388,80 @@ server <- function(input, output, session) {
  output$wgt_Admin_ProbeLocationsMap <- renderLeaflet({
   
    leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
-     setView(lng = 135, lat = -28, zoom = 3) %>%
+     setView(lng = 135, lat = -28, zoom = 4) %>%
      addProviderTiles("CartoDB.PositronOnlyLabels")
  })
  
  observe({
+   
    req(input$wgtAdminMapViewType)
    
    mt <- input$wgtAdminMapViewType
-   if(mt=='Online'){
+   if(mt=='Depth'){
+     param <- 'Depth'
+     legTitle = 'Max Sensor Depth'
      tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
+     pcol<-colorNumeric(palette = "viridis", tbl$Depth)
+   }
+   else if(mt=='Network'){
+     param <- 'Network'
+     legTitle = 'Network'
+     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
+     pcol<-colorFactor(palette = "viridis", tbl$Network)
+   }
+   else if(mt=='Length of Record'){
+     param <- 'Length'
+     legTitle = 'Duration'
+     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Length=max(Count))
+     pcol <-colorNumeric(palette = "plasma", tbl$Length)
+   }else if(mt=='Latest Surface Moisture'){
+     param = 'SoilMoisture'
+     legTitle = 'Surface Soil Moisture'
      
-     pcol<-colorFactor(palette = "viridis", tbl$Depth)
-   }else if(mt=='Network'){
-     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
+    tbl <- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
+    pcol <-colorNumeric(palette = 'Blues', tbl$Length)
+   }else if(mt=='All Active'){
+     param <- 'allActive'
+     legTitle = 'All Active'
      
-     pcol<-colorFactor(palette = "magma", tbl$Network)
+     sites <- unique(SensorSummary[c('Network', 'SiteName')])
+     odf <- data.frame()
+     for (i in 1:nrow(sites)) {
+       rec <- sites[i,]
+       s <- rec$SiteName   
+       n <- rec$Network 
+       sensors <- SensorSummary[SensorSummary$Network==n & SensorSummary$SiteName==s,]
+       
+       allActive =  !any(sensors$IsActive==F)
+       rdf <- data.frame(Network=n, SiteName=s, Latitude=sensors$Latitude[1], Longitude=sensors$Longitude[1], allActive=allActive )
+       rdf$allActive <- ifelse(rdf$allActive, "Yes", "No")
+       odf <- rbind(odf, rdf)
+     }
+     tbl<-odf
+     #pcol <- colorFactor(palette = 'inferno', levels = c('Yes', 'No'))
+     pcol <- colorFactor(palette = c('green', 'red'), levels = c('Yes', 'No'))
+   }else if(mt=='Quality Index'){
+     param = 'QualityIndex'
+     legTitle = 'Quality Index'
+     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude),  QualityIndex=mean(QualityIndex))
+     pcol <-colorNumeric(palette = 'RdYlGn', tbl$QualityIndex)
    }
    
-   print(tbl)
-   
-   # networks <- BE$Shared$SensorData$getAllNetworkInfo()
-   # spcol<-colorFactor(palette = "viridis", networks$Network)
-   # 
-   # sites <- BE$Shared$SensorData$getAllSiteInfo()
    pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
-   # 
-   # labs <- lapply(seq(nrow(pts)), function(i) {
-   #   paste0( '<li>Network : ', pts[i, ]$Network, '</li>
-   #                <li>Site Name : ', pts[i, ]$SiteName, '</li>
-   #                 <li>Access : ', pts[i, ]$Access, '</li>
-   #                 <li>Install Date : <b>', pts[i, ]$InstallDate, '</b></li>
-   #                 
-   #            ')})
-   labs <- 'test'
    
-   #sid <- paste0(pts$Network, '$', pts$SiteName)
-  # sid <- paste0(pts$SiteID)
+
+   labs <- lapply(seq(nrow(pts)), function(i) {
+     paste0( '<li>Network : ', pts[i, ]$Network, '</li>
+                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
+                   <li>', param, ' : ', pts[i, ][[param]], '</li>')})
+
    
    proxy <- leafletProxy("wgt_Admin_ProbeLocationsMap")
    proxy %>% clearMarkers()
    proxy %>%  clearControls()
-  # proxy %>%  addCircleMarkers(data=pts, radius=6,  color = spcol(sites$Network), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML))
-   proxy %>%  addCircleMarkers(data=pts, radius=6,  color = pcol, stroke=FALSE, fillOpacity=1, group="locations", layerId = ~SiteName, label=lapply(labs, HTML))
+   proxy %>%  addCircleMarkers(data=pts, radius=6,color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~SiteName, label=lapply(labs, HTML)) 
+   proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "topright")
+   
    
  })
  
