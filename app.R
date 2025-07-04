@@ -11,6 +11,7 @@
 ####. #################################################################################
 
 library(shiny)
+library(htmlwidgets)
 library(bslib)
 library(DT)
 library(rhandsontable)
@@ -36,7 +37,7 @@ if (machineName=='soils-discover2') {
 
 source('Styles/headerLayout.R')
 source('UI_Modules/Tab_SoilMoistureMain.R')
-source('UI_Modules/Tab_SoilMorphology.R')
+source('UI_Modules/Tab_SiteInformation.R')
 source('UI_Modules/Tab_SMIPS.R')
 source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
@@ -50,6 +51,7 @@ glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
 glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
 glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
 SensorSummary <<- BE$Shared$Reporting$SensorSummary()
+glbCurrentSurfaceSoilMoisture <<- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
 
 
 
@@ -71,7 +73,7 @@ ui <- fluidPage(
              
             Tab1_UI(),
             Tab2_UI(),
-            Tab4_UI(),
+         #   Tab4_UI(),
             Tab3_UI(),
             Tab_Admin_UI(),
   )
@@ -90,6 +92,9 @@ server <- function(input, output, session) {
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
   RV$CanPlotAdminSensors <- F
+  RV$CurrentAdminSiteSensorInfo = NULL
+  RV$CurrentSitePhotos = NULL
+
   
 ####  Read URL Parameters  #######  
   observe({
@@ -185,12 +190,26 @@ server <- function(input, output, session) {
 ####. #####
 ####^ Soil Probes Main Page   ####
 ####^^ Probe Map  ########################################################################## 
+ 
   
+  
+  observe({
+    req(input$wgt_SMmain_Network)
+    df <- glbSites[glbSites$Network==input$wgt_SMmain_Network, ]
+    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = df$SiteName, selected = 'Thoona' )
+    
+    
+  }) 
    
   #####   Draw the main map 
   
   output$wgt_SMmain_ProbeLocationeMap <- renderLeaflet({
-    pts <- st_as_sf(glbSites, coords = c("Longitude", "Latitude"), crs = 4326)
+    
+    
+    tbl <- glbCurrentSurfaceSoilMoisture
+    pcol <-colorNumeric(palette = 'Blues', tbl$SoilMoisture)
+    
+    pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
     
     labs <- lapply(seq(nrow(pts)), function(i) {
       paste0( '<li>Network : ', pts[i, ]$Network, '</li>
@@ -200,13 +219,18 @@ server <- function(input, output, session) {
                 
               ')})
     
-    #sid <- paste0(pts$Network, '$', pts$SiteName)
-    sid <- paste0(pts$SiteID)
+    sid <- paste0(pts$Network, '!', pts$SiteName)
     
     leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
       setView(lng = 135, lat = -28, zoom = 3) %>%
       addProviderTiles("CartoDB.PositronOnlyLabels") %>%
-      addCircleMarkers(data=pts, radius=6, color="black", stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML))
+      onRender(
+        "function(el, x) {
+          L.control.zoom({position:'topright'}).addTo(this);
+        }") %>%
+      addCircleMarkers(data=pts, radius=6, color = pcol(tbl$SoilMoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
+      leaflet::addLegend(title='SM', pal = pcol, values = tbl$SoilMoisture,  position = "bottomright")
+    
   })
   
   ####  default look for the selected site
@@ -215,50 +239,164 @@ server <- function(input, output, session) {
   ####  Select a site
   observeEvent(input$wgt_SMmain_ProbeLocationeMap_marker_click, { # update the map markers and view on map clicks
     p <- input$wgt_SMmain_ProbeLocationeMap_marker_click
-    proxy <- leafletProxy("wgt_SMmain_ProbeLocationeMap")
-    if(p$id=="Selected"){
-      proxy %>% removeMarker(layerId="Selected")
-    } else {
-      RV$CurrentSite <- p$id
-      print(RV$CurrentSite)
-      proxy %>% setView(lng=p$lng, lat=p$lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(p$lng, p$lat)
-    }
+    bits <- str_split( p$id, '!')
+    network <- bits[[1]][1]
+    site <- bits[[1]][2]
+    
+    updateSelectInput(session, inputId = 'wgt_SMmain_Network', selected=network)
+    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', selected=site)
   })
   
   
-  ####^^ Render the Timeseries charts for the site  ##########################################################################   
+  
   observe({
-   
+      req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+      
+      proxy <- leafletProxy("wgt_SMmain_ProbeLocationeMap")
+      proxy %>% removeMarker(layerId="Selected")
+      rec <- glbSites[glbSites$Network==input$wgt_SMmain_Network & glbSites$SiteName==input$wgt_SMmain_SiteName,]
+  
+      lat <- rec$Latitude   
+      lng <- rec$Longitude   
+        
+      proxy %>% setView(lng=lng, lat=lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(lng, lat)
+      sl <- list()
+      sl$Network <- input$wgt_SMmain_Network
+      sl$SiteName <- input$wgt_SMmain_SiteName
+      
+      RV$CurrentSite <- sl
+      
+  })
+  
+  
+  
+  
+  
+  
+  
+  ####^^ Render the Timeseries charts for the site  ##########################################################################   
+  
+  
+  output$wgt_SMmain_volTSChart <- renderDygraph({
     
- })
+    req(RV$CurrentSite)
+    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+                  & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
+    indf <- SensorSummary[idxs,]
+    mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+    
+    maxVal <- max(rowSums(mts), na.rm = T)
+    
+    dygraph(mts,  ylab =  'Vol', group = 'Main') %>%
+      dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
+      
+      dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
+      dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
+     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+      dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) #%>%
+    
+    
+  })
+
    
    output$wgt_SMmain_rawTSChart <- renderDygraph({
      
-     req(RV$CurrentSite)
-     smTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
-                                                       siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$SoilMoisture)
-     maxVal <- max(smTS)
-     
-     #dt <- as.Date(input$datePker)
-     dygraph(smTS,  group = 'Main') %>%
+    req(RV$CurrentSite)
+     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+                   & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
+     indf <- SensorSummary[idxs,]
+     smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+
+     maxVal <- max(smTS, na.rm = T)
+
+     dygraph(smTS,  group = 'Main', main = 'Soil Moisture') %>%
        dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-       dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
-      # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+       dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal))
    })
    
    output$wgt_SMmain_rainTSChart <- renderDygraph({
      
      req(RV$CurrentSite)
-     rainTS <- BE$Shared$SensorData$getSensorDataStreams(usr = BE$Shared$Constants$AccessTypes$Public, pwd =  BE$Shared$Constants$AccessTypes$Public,
-                                                         siteID = RV$CurrentSite, sensorType = BE$Shared$Constants$knownFeatures$Rainfall)
-     maxVal <- max(rainTS)
+     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+                   & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$Rainfall )
+     indf <- SensorSummary[idxs,]
+     rainTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])     
+     maxVal <- max(rainTS, na.rm = T)
      
-     #dt <- as.Date(input$datePker)
-     dygraph(rainTS,  group = 'Main') %>%
+     dygraph(rainTS,  group = 'Main',main = 'Rainfall' ) %>%
+       dyBarChart() %>% 
        dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-       dyAxis("y", label ='Rainfall', valueRange = c(0, maxVal))  #%>%
-     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid")
+       dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal))
    })
+   
+   
+   
+   ###. ####   
+   ### ^ -----  Site Description Tab  ------ ####  
+   ###. #### 
+   ### ^^ Photos #### 
+   ### ^^^^ Render all the photos   ####   
+   
+   output$WgtSiteInfoTab_SoilSiteImage <- renderUI({
+   })
+   
+   observe({  
+     
+     req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+     df <- BE$Shared$Queries$doSelectQuery(paste0("select  photoNum, Network, SiteName, imageName, imgFormat, theDate, width, height, Description, Type from images where Network='", input$wgt_SMmain_Network,"' and SiteName = '", input$wgt_SMmain_SiteName,"'"))
+     updateSelectInput(session, inputId = 'wgt_SiteInformation_Network_PhotoType', choices=unique(df$Type))
+     RV$CurrentSitePhotos <- df
+   })
+   
+   observe({
+
+     req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName, input$wgt_SiteInformation_Network_PhotoType, RV$CurrentSitePhotos)
+     descs <- RV$CurrentSitePhotos[RV$CurrentSitePhotos$Type == input$wgt_SiteInformation_Network_PhotoType, ]
+     namelst <- descs$photoNum
+     names(namelst) <- descs$Description
+    # updateSelectInput(session, inputId = 'wgt_SiteInformation_PhotoDescription', choices =paste0(descs$photoNum, ' : ', descs$Description))
+     updateSelectInput(session, inputId = 'wgt_SiteInformation_PhotoDescription', choices = namelst)
+   })
+   
+   output$WgtSiteInfoTab_SoilSiteImage <- renderUI({
+     
+     req( input$wgt_SiteInformation_PhotoDescription, RV$CurrentSitePhotos) 
+     
+   #  photoNum <- str_split( input$wgt_SiteInformation_PhotoDescription, ' : ')[[1]][1]
+     photoNum <- input$wgt_SiteInformation_PhotoDescription
+     df <- BE$Shared$Queries$doSelectQuery(paste0("select * from images where photoNum = ", photoNum))
+     
+     if(nrow(df)>0){
+     html <- ''
+ #    for (i in 1:nrow(df)) {
+       rec <- df[1,]
+  
+       #print(rec)
+       
+       if(rec$URL != ''){
+         html <- paste0(html, '<img src="', rec$URL, '" 
+          height="', 600, '"<BR><BR>')
+       }else{
+         m <- max(rec$width, rec$height)
+         prop <- 600/m
+         w = ceiling(rec$width * prop )
+         h = ceiling(rec$height * prop )
+         
+         html <- paste0(html, '<img src="data:image/png;base64,', rec$b64ImageData, '" 
+          width="', w, '" 
+          height="', h, '"<BR><BR>')
+       }
+      
+       print(html)
+       
+  #   }
+     HTML(paste0(html) )
+     }else{
+       HTML('<h2>No Images available for this Site</h2>' )
+     }
+     
+   })
+   
    
    
 ###. ####   
@@ -332,8 +470,6 @@ server <- function(input, output, session) {
      req( RV$CanPlotAdminSensors)
      
      if( RV$CanPlotAdminSensors){
-       
-       
        smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(RV$CurrentSensorSummaryTable)
        print(smTS)
        maxVal <- max(smTS)
@@ -341,10 +477,7 @@ server <- function(input, output, session) {
        dygraph(smTS,  group = 'Main') %>%
          dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
          dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
-       
      }
-     
-    
    })
    
 ###  ^^^^ Popup modal dialog for TS Charts  ####      
@@ -380,13 +513,18 @@ server <- function(input, output, session) {
  
 ###. ####   
 ### ^^ Admin Map Sub Tab  ####
-##### ^^^^   Draw the Admin Site Map  ####
+#####^^^^   Draw the Admin Site Map  ####
  
  output$wgt_Admin_ProbeLocationsMap <- renderLeaflet({
   
+   updateSelectInput(session, inputId = 'wgtAdminMapViewType', selected = 'Network')
    leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
      setView(lng = 135, lat = -28, zoom = 4) %>%
-     addProviderTiles("CartoDB.PositronOnlyLabels")
+     addProviderTiles("CartoDB.PositronOnlyLabels") %>%
+     onRender(
+       "function(el, x) {
+          L.control.zoom({position:'topright'}).addTo(this);
+        }")
  })
  
  observe({
@@ -395,53 +533,52 @@ server <- function(input, output, session) {
    
    mt <- input$wgtAdminMapViewType
    if(mt=='Depth'){
-     param <- 'Depth'
-     legTitle = 'Max Sensor Depth'
-     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
-     pcol<-colorNumeric(palette = "viridis", tbl$Depth)
-   }
-   else if(mt=='Network'){
-     param <- 'Network'
-     legTitle = 'Network'
-     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
-     pcol<-colorFactor(palette = "viridis", tbl$Network)
-   }
-   else if(mt=='Length of Record'){
-     param <- 'Length'
-     legTitle = 'Duration'
-     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Length=max(Count))
-     pcol <-colorNumeric(palette = "plasma", tbl$Length)
-   }else if(mt=='Latest Surface Moisture'){
-     param = 'SoilMoisture'
-     legTitle = 'Surface Soil Moisture'
+         param <- 'Depth'
+         legTitle = 'Max Sensor Depth'
+         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
+         pcol<-colorNumeric(palette = "viridis", tbl$Depth)
      
-    tbl <- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
-    pcol <-colorNumeric(palette = 'Blues', tbl$Length)
-   }else if(mt=='All Active'){
-     param <- 'allActive'
-     legTitle = 'All Active'
+     }else if(mt=='Network'){
+         param <- 'Network'
+         legTitle = 'Network'
+         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
+         pcol<-colorFactor(palette = "viridis", tbl$Network)
      
-     sites <- unique(SensorSummary[c('Network', 'SiteName')])
-     odf <- data.frame()
-     for (i in 1:nrow(sites)) {
-       rec <- sites[i,]
-       s <- rec$SiteName   
-       n <- rec$Network 
-       sensors <- SensorSummary[SensorSummary$Network==n & SensorSummary$SiteName==s,]
+     }else if(mt=='Length of Record'){
+         param <- 'Length'
+         legTitle = 'Duration'
+         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Length=max(Count))
+         pcol <-colorNumeric(palette = "plasma", tbl$Length)
+   
+     }else if(mt=='Latest Surface Moisture'){
+          param = 'SoilMoisture'
+          legTitle = 'Surface Soil Moisture'
+          tbl <- glbCurrentSurfaceSoilMoisture
+          pcol <-colorNumeric(palette = 'Blues', tbl$SoilMoisture)
+   
+    }else if(mt=='All Active'){
+         param <- 'allActive'
+         legTitle = 'All Active'
+         sites <- unique(SensorSummary[c('Network', 'SiteName')])
+         odf <- data.frame()
+           for (i in 1:nrow(sites)) {
+             rec <- sites[i,]
+             s <- rec$SiteName   
+             n <- rec$Network 
+             sensors <- SensorSummary[SensorSummary$Network==n & SensorSummary$SiteName==s,]
+             allActive =  !any(sensors$IsActive==F)
+             rdf <- data.frame(Network=n, SiteName=s, Latitude=sensors$Latitude[1], Longitude=sensors$Longitude[1], allActive=allActive )
+             rdf$allActive <- ifelse(rdf$allActive, "Yes", "No")
+             odf <- rbind(odf, rdf)
+           }
+         tbl<-odf
+         pcol <- colorFactor(palette = c('green', 'red'), levels = c('Yes', 'No'))
        
-       allActive =  !any(sensors$IsActive==F)
-       rdf <- data.frame(Network=n, SiteName=s, Latitude=sensors$Latitude[1], Longitude=sensors$Longitude[1], allActive=allActive )
-       rdf$allActive <- ifelse(rdf$allActive, "Yes", "No")
-       odf <- rbind(odf, rdf)
-     }
-     tbl<-odf
-     #pcol <- colorFactor(palette = 'inferno', levels = c('Yes', 'No'))
-     pcol <- colorFactor(palette = c('green', 'red'), levels = c('Yes', 'No'))
-   }else if(mt=='Quality Index'){
-     param = 'QualityIndex'
-     legTitle = 'Quality Index'
-     tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude),  QualityIndex=mean(QualityIndex))
-     pcol <-colorNumeric(palette = 'RdYlGn', tbl$QualityIndex)
+     }else if(mt=='Quality Index'){
+         param = 'QualityIndex'
+         legTitle = 'Quality Index'
+         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude),  QualityIndex=mean(QualityIndex))
+         pcol <-colorNumeric(palette = 'RdYlGn', tbl$QualityIndex)
    }
    
    pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
@@ -456,11 +593,69 @@ server <- function(input, output, session) {
    proxy <- leafletProxy("wgt_Admin_ProbeLocationsMap")
    proxy %>% clearMarkers()
    proxy %>%  clearControls()
-   proxy %>%  addCircleMarkers(data=pts, radius=6,color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~SiteName, label=lapply(labs, HTML)) 
-   proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "topright")
+   proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(Network, '!', SiteName), label=lapply(labs, HTML)) 
+   proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
    
    
  })
+ 
+ observeEvent(input$wgt_Admin_ProbeLocationsMap_marker_click, { 
+   p <- input$wgt_Admin_ProbeLocationsMap_marker_click  # typo was on this line
+   bits <- str_split(p$id, '!')
+  sdf <- BE$Shared$Reporting$SensorSummary(filter =  paste0(" Networks.Network = '", bits[[1]][1], "' and Sites.SiteName = '", bits[[1]][2], "'"))
+ print(head(sdf))
+   RV$CurrentAdminSiteSensorInfo <- sdf
+ })
+ 
+ 
+ ###  ^^^^ Popup modal dialog for Admin Map Sensor Display  ####      
+ observe({
+   
+   req( RV$CurrentAdminSiteSensorInfo)
+   
+   df <- RV$CurrentAdminSiteSensorInfo
+     showModal(
+       
+       modalDialog(
+         tags$h2(paste0(df$Network[1], ' - ', df$SiteName[1])),
+         selectInput(inputId =  'wgtAdmin_CurrentSiteSensorsDataTypeSelect',label = 'DataType', choices = NULL),
+         dygraphOutput('wgtAdmin_CurrentSiteSensorsChart', width = "1150px", height = "250px"),
+         HTML('<BR><BR>'),
+         reactableOutput('wgtAdmin_CurrentSiteSensorsTable', height = "350px"),
+         
+         footer=tagList(
+           modalButton('Close')
+         )
+       ))
+ })
+ 
+ output$wgtAdmin_CurrentSiteSensorsTable  <- renderReactable({
+   req( RV$CurrentAdminSiteSensorInfo)
+   updateSelectInput(session,inputId = 'wgtAdmin_CurrentSiteSensorsDataTypeSelect', choices = RV$CurrentAdminSiteSensorInfo$DataType )
+   df <- RV$CurrentAdminSiteSensorInfo
+   Admin_SensorsTable( df)
+ })
+   
+ ###  ^^^^ Render Sensor data for select site   ####   
+ output$wgtAdmin_CurrentSiteSensorsChart <- renderDygraph({
+   
+   req( input$wgtAdmin_CurrentSiteSensorsDataTypeSelect)
+   
+  idxs <- which(RV$CurrentAdminSiteSensorInfo$DataType == input$wgtAdmin_CurrentSiteSensorsDataTypeSelect)
+   
+     smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(RV$CurrentAdminSiteSensorInfo[idxs,])
+     print(smTS)
+     maxVal <- max(smTS)
+     
+     dygraph(smTS,  group = 'Main') %>%
+       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+       dyAxis("y", label ='Raw Probe Values', valueRange = c(0, maxVal))  #%>%
+   
+ })
+   
+   
+   
+  
  
  
  

@@ -2,7 +2,17 @@
 
 PageHeader_UI <- function() {
   ns <- NS('PageHeaderBar')
+  
+ 
   tagList(
+    
+    tags$head(
+      tags$style(HTML("
+      .leaflet-left .leaflet-control{
+        visibility: hidden;
+      }
+    "))
+    ),
     
     tags$style(HTML('.container-fluid { margin-right: auto; margin-left: 0px; padding-left: 0px; padding-right: 0px }') ),
     
