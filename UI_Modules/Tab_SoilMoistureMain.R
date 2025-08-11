@@ -16,7 +16,7 @@ Tab1_UI <- function() {
              
              sidebarLayout(
                sidebarPanel( width = 3,
-                             HTML('Click on a location in the map to view its data'),
+                             HTML('Click on a location in the map to view soil moisture data'),
                              leafletOutput("wgt_SMmain_ProbeLocationeMap", width = 400, height = 400),
                              
                              HTML('<BR><BR>'),
@@ -36,6 +36,7 @@ Tab1_UI <- function() {
                  fluidRow(  dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "250px"), HTML(''), 
                             dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "150px"),
                             dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px"),
+                            dygraphOutput("wgt_testddd", width = "800px", height = "0px"),
                  ),
                  
                  fluidRow( column(6, plotOutput("wgt_SMmain_volProfile", width = "450px", height = "450px")), 

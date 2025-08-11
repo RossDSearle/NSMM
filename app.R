@@ -144,9 +144,9 @@ server <- function(input, output, session) {
   # observe({
   #   req( input$wgt_Admin_SensorSummaryTable_select$select$r)
   #   sid <- input$wgt_Admin_SensorSummaryTable_select$select$r
-  #  print(sid)
+
   #  rec <- RV$CurrentSensorSummaryTable[sid, ]
-  #  print(rec)
+
   #  RV$Admin_SensorSummaryTable_SelectedRow <- rec
   # })
   
@@ -158,7 +158,7 @@ server <- function(input, output, session) {
   #   
   #   rec <- RV$Admin_SensorSummaryTable_SelectedRow
   #   ts <- BE$Shared$Queries$GetSensorDataAsTS(rec$sensorNum)
-  #   print(head(ts))
+
   #   df <- data.frame(a=c(1,2,3,4), b=c(5,6,7,8))
   #   plot(df)
   #   
@@ -279,55 +279,98 @@ server <- function(input, output, session) {
   
   output$wgt_SMmain_volTSChart <- renderDygraph({
     
-    req(RV$CurrentSite)
-    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+    as.volumetric=T
+
+    req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
                   & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
-    indf <- SensorSummary[idxs,]
-    mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
-    
-    maxVal <- max(rowSums(mts), na.rm = T)
-    
-    dygraph(mts,  ylab =  'Vol', group = 'Main') %>%
-      dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
-      
-      dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
-      dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
-     # dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
-      dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) #%>%
-    
-    
+
+    if(length(idxs)>0){
+        mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+        if(as.volumetric){
+          print('Doing Volumetric')
+          print(RV$CurrentSite)
+          mts <- BE$Calibrations$getAllLayersVolumeticTS(Network = RV$CurrentSite$Network, SiteName=RV$CurrentSite$SiteName, rawTS=mts, type='Available')
+        }
+        
+
+        maxVal <- max(rowSums(mts), na.rm = T)
+        bits <- str_split(names(mts), '_')
+        updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
+        lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
+        names(mts) <- paste0(updepth, "_", lowdepth)
+
+        dygraph(mts,  ylab =  'Vol', group = 'Main') %>%
+          dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
+
+          dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
+          dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
+          dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+        dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+        }
   })
 
-   
+
    output$wgt_SMmain_rawTSChart <- renderDygraph({
-     
-    req(RV$CurrentSite)
-     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+
+    req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
                    & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
-     indf <- SensorSummary[idxs,]
-     smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
 
-     maxVal <- max(smTS, na.rm = T)
 
-     dygraph(smTS,  group = 'Main', main = 'Soil Moisture') %>%
-       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-       dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal))
-   })
-   
+     if(length(idxs)>0){
+         indf <- SensorSummary[idxs,]
+         smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+
+         maxVal <- max(smTS, na.rm = T)
+
+         bits <- str_split(names(smTS), '_')
+         updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
+         lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
+         names(smTS) <- paste0(updepth, "_", lowdepth)
+
+         dygraph(smTS,  group = 'Main', main = 'Soil Moisture') %>%
+           dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+           dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
+          # dyLegend(width = 400) 
+      dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+
+     }
+     })
+
    output$wgt_SMmain_rainTSChart <- renderDygraph({
      
-     req(RV$CurrentSite)
-     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
+     req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+     idxs <- which(SensorSummary$Network==input$wgt_SMmain_Network & SensorSummary$SiteName==RV$CurrentSite$SiteName 
                    & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$Rainfall )
-     indf <- SensorSummary[idxs,]
-     rainTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])     
-     maxVal <- max(rainTS, na.rm = T)
      
-     dygraph(rainTS,  group = 'Main',main = 'Rainfall' ) %>%
-       dyBarChart() %>% 
-       dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-       dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal))
+     if(length(idxs)>0){
+       indf <- SensorSummary[idxs,]
+       rainTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])     
+       maxVal <- max(rainTS, na.rm = T)
+       
+       names(rainTS) <- 'Rainfall (mm)'
+       dygraph(rainTS,  group = 'Main',main = 'Rainfall' ) %>%
+         dyBarChart() %>% 
+         dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+         dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal)) %>%
+         dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+     }
    })
+   
+   # output$wgt_testddd <- renderDygraph({
+   # 
+   #   idxs <- which(SensorSummary$Network==input$wgt_SMmain_Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
+   #                 & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$Rainfall )
+   # 
+   # 
+   #     indf <- SensorSummary[idxs,]
+   #     rainTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+   # 
+   #     dygraph(rainTS,  group = 'Main' ) %>%
+   #       dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+   # 
+   # })
    
    
    
@@ -370,8 +413,6 @@ server <- function(input, output, session) {
      html <- ''
  #    for (i in 1:nrow(df)) {
        rec <- df[1,]
-  
-       #print(rec)
        
        if(rec$URL != ''){
          html <- paste0(html, '<img src="', rec$URL, '" 
@@ -386,8 +427,6 @@ server <- function(input, output, session) {
           width="', w, '" 
           height="', h, '"<BR><BR>')
        }
-      
-       print(html)
        
   #   }
      HTML(paste0(html) )
@@ -456,10 +495,7 @@ server <- function(input, output, session) {
        RV$CanPlotAdminSensors <- F
      }
      
-     print(filt)
-     
      RV$CurrentSensorSummaryTable <- BE$Shared$Reporting$SensorSummary(filter = filt)
-     print(nrow(RV$CurrentSensorSummaryTable))
      
    })
    
@@ -471,7 +507,6 @@ server <- function(input, output, session) {
      
      if( RV$CanPlotAdminSensors){
        smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(RV$CurrentSensorSummaryTable)
-       print(smTS)
        maxVal <- max(smTS)
        
        dygraph(smTS,  group = 'Main') %>%
@@ -603,7 +638,6 @@ server <- function(input, output, session) {
    p <- input$wgt_Admin_ProbeLocationsMap_marker_click  # typo was on this line
    bits <- str_split(p$id, '!')
   sdf <- BE$Shared$Reporting$SensorSummary(filter =  paste0(" Networks.Network = '", bits[[1]][1], "' and Sites.SiteName = '", bits[[1]][2], "'"))
- print(head(sdf))
    RV$CurrentAdminSiteSensorInfo <- sdf
  })
  
@@ -644,7 +678,6 @@ server <- function(input, output, session) {
   idxs <- which(RV$CurrentAdminSiteSensorInfo$DataType == input$wgtAdmin_CurrentSiteSensorsDataTypeSelect)
    
      smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(RV$CurrentAdminSiteSensorInfo[idxs,])
-     print(smTS)
      maxVal <- max(smTS)
      
      dygraph(smTS,  group = 'Main') %>%
