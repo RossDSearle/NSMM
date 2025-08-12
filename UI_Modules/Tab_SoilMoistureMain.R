@@ -22,6 +22,11 @@ Tab1_UI <- function() {
                              HTML('<BR><BR>'),
                              selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$Network, width = 350, selected='NSMM'),
                              selectInput("wgt_SMmain_SiteName", "Site", choices=NULL, width = 350),
+                             
+                             helpText("Select map date below"), 
+                             sliderInput("datePker", "Dates:", min = as.Date("2025-01-01","%Y-%m-%d"), max = Sys.Date()-5, value=Sys.Date()-5, timeFormat="%Y-%m-%d",
+                                         animate = animationOptions(interval = 300, loop = TRUE)),
+                             
                            #  helpText("Select map date below"), 
                           #   sliderInput("wgt_SMmain_datePker", "Dates:", min = as.Date("2017-01-01","%Y-%m-%d"), max = as.Date("2021-09-01","%Y-%m-%d"), value=as.Date("2021-07-01"), timeFormat="%Y-%m-%d",
                           #               animate = animationOptions(interval = 300, loop = TRUE)),
@@ -39,15 +44,17 @@ Tab1_UI <- function() {
                             dygraphOutput("wgt_testddd", width = "800px", height = "0px"),
                  ),
                  
-                 fluidRow( column(6, plotOutput("wgt_SMmain_volProfile", width = "450px", height = "450px")), 
-                           column(6, 
-                                  fluidRow( htmlOutput('vtext') )),
-                           fluidRow(plotOutput("wgt_SMmain_dial", width = "450px", height = "450px")),
-                           fluidRow(dygraphOutput("wgt_SMmain_seasons", width = "800px", height = "250px")),
+                 fluidRow( column(4, plotOutput("wgt_SMmain_volProfile", width = "350px", height = "450px")), 
+                           column(3, plotOutput("wgt_SMmain_volProfile_colGradient", width = "300px", height = "450px")),
+                           column(2, c3Output("wgt_SMmain_guage", width = "450px", height = "450px")),
+                           column(1)
+                        ),
+                           
+ 
                            fluidRow(HTML('<br><br><br><br><br><br><br><br><br><br><br>')),
                            
-                 ))
+                 )
              ),
              
              HTML('</div>') 
-)}
+    )}

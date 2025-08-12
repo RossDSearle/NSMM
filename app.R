@@ -21,6 +21,9 @@ library(sf)
 library(reactable)
 library(shinyjs)
 library(dplyr)
+#library(flexdashboard)
+library(plotrix)
+library(c3)
 
 
 
@@ -42,7 +45,7 @@ source('UI_Modules/Tab_SMIPS.R')
 source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
-
+source('Functions/Plotting.R')
 
 
 
@@ -94,6 +97,7 @@ server <- function(input, output, session) {
   RV$CanPlotAdminSensors <- F
   RV$CurrentAdminSiteSensorInfo = NULL
   RV$CurrentSitePhotos = NULL
+  RV$CurrentSiteSMTimeSeries = NULL
 
   
 ####  Read URL Parameters  #######  
@@ -268,9 +272,48 @@ server <- function(input, output, session) {
       
   })
   
+
+  
+  ####^^ Get Site Data  #####  
+  
+  observe({
+    
+    as.volumetric=T
+    print("Updatedata")
+    req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+  
+    
+    isolate({
+    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
+                  & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture  )
+    
+    if(length(idxs)>0){
+      mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+      RV$CurrentSiteSMTimeSeries$rawSM <- mts
+      
+      if(as.volumetric){
+        mtsV <- BE$Calibrations$getAllLayersVolumeticTS(Network = RV$CurrentSite$Network, SiteName=RV$CurrentSite$SiteName, rawTS=mts, type='Available')
+        RV$CurrentSiteSMTimeSeries$volSM <- mtsV
+        print(RV$CurrentSiteSMTimeSeries$volSM)
+      }
+    }
+      
+    }) 
+  })
   
   
   
+  observe({
+    
+    req(RV$CurrentSiteSMTimeSeries$rawSM)
+    
+    updateSliderInput(session, inputId = 'datePker', min = start(RV$CurrentSiteSMTimeSeries$rawSM),
+                      max = end(RV$CurrentSiteSMTimeSeries$rawSM) , 
+                      value = end(RV$CurrentSiteSMTimeSeries$rawSM)
+                      
+    )
+  })
+
   
   
   
@@ -279,48 +322,37 @@ server <- function(input, output, session) {
   
   output$wgt_SMmain_volTSChart <- renderDygraph({
     
-    as.volumetric=T
-
-    req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
-    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
-                  & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
-
-    if(length(idxs)>0){
-        mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
-        if(as.volumetric){
-          print('Doing Volumetric')
-          print(RV$CurrentSite)
-          mts <- BE$Calibrations$getAllLayersVolumeticTS(Network = RV$CurrentSite$Network, SiteName=RV$CurrentSite$SiteName, rawTS=mts, type='Available')
-        }
+    req(RV$CurrentSiteSMTimeSeries$rawSM)
         
 
-        maxVal <- max(rowSums(mts), na.rm = T)
-        bits <- str_split(names(mts), '_')
+        maxVal <- max(rowSums(mtsV), na.rm = T)
+        bits <- str_split(names(mtsV), '_')
         updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
         lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
         names(mts) <- paste0(updepth, "_", lowdepth)
 
-        dygraph(mts,  ylab =  'Vol', group = 'Main') %>%
+        dygraph(mtsV,  ylab =  'Vol', group = 'Main') %>%
           dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
 
           dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
           dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
           dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-        dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
-        }
+        dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
+      #  dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+        
   })
 
 
    output$wgt_SMmain_rawTSChart <- renderDygraph({
 
-    req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
-     idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
-                   & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
+    # req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
+    #  idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
+    #                & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
+
+     req(RV$CurrentSiteSMTimeSeries$rawSM)
 
 
-     if(length(idxs)>0){
-         indf <- SensorSummary[idxs,]
-         smTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
+         smTS <-RV$CurrentSiteSMTimeSeries$rawSM
 
          maxVal <- max(smTS, na.rm = T)
 
@@ -330,12 +362,14 @@ server <- function(input, output, session) {
          names(smTS) <- paste0(updepth, "_", lowdepth)
 
          dygraph(smTS,  group = 'Main', main = 'Soil Moisture') %>%
-           dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+           dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE)  %>%
            dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
+           dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
+ 
           # dyLegend(width = 400) 
-      dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+     # dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
 
-     }
+     #}
      })
 
    output$wgt_SMmain_rainTSChart <- renderDygraph({
@@ -350,28 +384,71 @@ server <- function(input, output, session) {
        maxVal <- max(rainTS, na.rm = T)
        
        names(rainTS) <- 'Rainfall (mm)'
-       dygraph(rainTS,  group = 'Main',main = 'Rainfall' ) %>%
+       dygraph(rainTS,  group = 'Main', main = 'Rainfall' ) %>%
          dyBarChart() %>% 
          dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
          dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal)) %>%
+         dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>% 
          dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
      }
    })
    
-   # output$wgt_testddd <- renderDygraph({
-   # 
-   #   idxs <- which(SensorSummary$Network==input$wgt_SMmain_Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
-   #                 & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$Rainfall )
-   # 
-   # 
-   #     indf <- SensorSummary[idxs,]
-   #     rainTS <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
-   # 
-   #     dygraph(rainTS,  group = 'Main' ) %>%
-   #       dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
-   # 
-   # })
    
+   ### ^^ Render bucket plot  ####
+    output$wgt_SMmain_volProfile <- renderPlot({
+  
+     req( RV$CurrentSiteSMTimeSeries$volSM, input$datePker)
+      calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+      print(as.Date(input$datePker))
+      dt <- as.Date(input$datePker)
+      day <- RV$CurrentSiteSMTimeSeries$volSM[dt]
+      print(day)
+      if(nrow(day)>0){
+        plotPAWProfile(ts = day, calibs)
+      }
+      
+    })
+   
+   
+   
+   ### ^^ Render bucket colour gradient plot  ####
+   output$wgt_SMmain_volProfile_colGradient <- renderPlot({
+     
+     req( req( RV$CurrentSiteSMTimeSeries$volSM))
+     calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+     
+     #day <- tail( RV$CurrentSiteSMTimeSeries$volSM,1)
+     dt <- as.Date(input$datePker)
+     day <- RV$CurrentSiteSMTimeSeries$volSM[dt]
+     
+     plotPAWProfileGradientColours(ts = day, calibs)
+     
+   })
+   
+   
+   ### ^^ Render Gauge  ####
+   output$wgt_SMmain_guage <- renderC3({
+     
+     req( req( RV$CurrentSiteSMTimeSeries$volSM))
+     calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+     calibs <- makeDepthIntervals(calibs)
+     
+    bucketSize =  as.integer(sum( (calibs$DrainedUpperLimit - calibs$LowerLimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+     
+    dt <- as.Date(input$datePker)
+    smvals <- RV$CurrentSiteSMTimeSeries$volSM[dt]
+   # smvals <- tail(RV$CurrentSiteSMTimeSeries$volSM, 1)
+    sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
+   
+   totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
+   percWat <- (totwat/bucketSize) * 100
+    
+     data.frame('Available Moisture'=percWat) %>%
+       c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
+     
+   })
+   
+  
    
    
    ###. ####   
