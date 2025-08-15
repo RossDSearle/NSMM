@@ -24,6 +24,7 @@ library(dplyr)
 #library(flexdashboard)
 library(plotrix)
 library(c3)
+library(cookies)
 
 
 
@@ -38,6 +39,7 @@ if (machineName=='soils-discover2') {
 }
 
 
+source('Secrets/configs.R')
 source('Styles/headerLayout.R')
 source('UI_Modules/Tab_SoilMoistureMain.R')
 source('UI_Modules/Tab_SiteInformation.R')
@@ -69,7 +71,8 @@ ui <- fluidPage(
   PageHeader_UI(),
   
   useShinyjs(),
-
+  cookie_dependency(),
+  
   navbarPage("", id = "mainTabset", 
 
             theme = shinythemes::shinytheme("flatly"),
@@ -98,97 +101,83 @@ server <- function(input, output, session) {
   RV$CurrentAdminSiteSensorInfo = NULL
   RV$CurrentSitePhotos = NULL
   RV$CurrentSiteSMTimeSeries = NULL
+  RV$Cookie <- NULL
+  # RV$Cookie$Network = NULL
+  # RV$Cookie$Site = NULL
+
+ 
+  
 
   
 ####  Read URL Parameters  #######  
+#####  Show/Hide UI Components   #######
   observe({
     query <- parseQueryString(session$clientData$url_search)
-    if (!is.null(query[['usr']])) {
-      RV$User <- query[['usr']]
-    }
-  })
-
-#####  Show/Hide UI Components   #######
-
-  observe({
-    req(RV$User)
-    if(RV$User=='Admin'){
+    if (!is.null(query[['adminkey']])) {
+      akey <- query[['adminkey']]
+      if(akey == AdminKey){
         RV$ShowReporting <- T
-    }else{
-      RV$ShowReporting <- F
+      }else{
+        RV$ShowReporting <- F
+      } 
     }
+    
+    ck <- get_cookie(cookie_name = "NSMMDefaultSite", session = session)
+    isolate({
+ 
+   if(!is.null(ck)){
+     bits <- stringr::str_split(ck, '[|]')
+     RV$Cookie$Network <- bits[[1]][1]
+     RV$Cookie$Site <- bits[[1]][2]
+   }else{
+     RV$Cookie$Network <- 'NSMM'
+     RV$Cookie$Site <- 'Thoona'
+   }
+  })
   })
   
+  observe({
+    req(input$wgt_SMmain_Network)
+    
+  
+     df <- glbSites[glbSites$Network==input$wgt_SMmain_Network, ]
+     site <- ''
+    isolate({
+        if(!is.null(RV$Cookie$Network) && input$wgt_SMmain_Network==RV$Cookie$Network){
+          site <-  RV$Cookie$Site
+        }else{
+         
+        }
+    })
+    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$SiteName), selected = site)
+  }) 
+
+  
+  observe({
+    req(input$wgt_SMmain_SiteName)
+    input$wgt_SaveCookie
+   isolate( set_cookie(cookie_name = "NSMMDefaultSite", cookie_value = paste0(input$wgt_SMmain_Network,'|',input$wgt_SMmain_SiteName), session = session))
+    
+  })
+
   observe({
     if(RV$ShowReporting){
       
       showTab(inputId = "mainTabset", target = "Admin")
     }else{
-     # hideTab(inputId = "mainTabset", target = "Admin")
+      hideTab(inputId = "mainTabset", target = "Admin")
     }
   })
   
   
-
-  
-  # output$wgt_Admin_SensorSummaryTable = renderRHandsontable({
-  #   req( RV$CurrentSensorSummaryTable)
-  #   df <- RV$CurrentSensorSummaryTable
-  #   
-  #   row_highlight <- which(df$IsActive=='FALSE')
-  #        rhandsontable( df, selectCallback = TRUE,  manualColumnResize = T, readOnly = TRUE, rowHeaders = F,
-  #                       
-  #                       afterDeselect = htmlwidgets::JS(
-  #                         "function() {Shiny.onInputChange('wgtDisplayTimeTable_select', null);
-  #                  }"
-  #                       )) %>%
-  #          hot_cols(columnSorting = TRUE)
-  # })
-  # 
-  # observe({
-  #   req( input$wgt_Admin_SensorSummaryTable_select$select$r)
-  #   sid <- input$wgt_Admin_SensorSummaryTable_select$select$r
-
-  #  rec <- RV$CurrentSensorSummaryTable[sid, ]
-
-  #  RV$Admin_SensorSummaryTable_SelectedRow <- rec
-  # })
-  
-  
- 
-  
-  
-  # output$wgt_Admin_SensorDetails_SensorTimeseries <- renderPlot({
-  #   
-  #   rec <- RV$Admin_SensorSummaryTable_SelectedRow
-  #   ts <- BE$Shared$Queries$GetSensorDataAsTS(rec$sensorNum)
-
-  #   df <- data.frame(a=c(1,2,3,4), b=c(5,6,7,8))
-  #   plot(df)
-  #   
-  # })
-  
-  
   output$wgt_Admin_SensorDetails_SensorTimeseries <- renderDygraph({
-    
     
        rec <- RV$Admin_SensorSummaryTable_SelectedRow
        ts <- BE$Shared$Queries$GetSensorDataAsTS(rec$sensorNum)
        
        dg <- dygraph(ts,  ylab =  'Values', group = 'Main') %>%
          dyAxis("y", label ='Volumetric Moisture (mm)', valueRange = c(0, 100))
-       
        dg
-    
-    # yr <- year(dt)
-    # isolate({
-    #   colnames(RV$currentRainTS)<-'Rain'
-    #   dygraph(RV$currentRainTS,  ylab = 'Rain (mm)', group = 'Main') %>% 
-    #     dyBarChart() %>% 
-    #     dyOptions(colors = 'blue', retainDateWindow = TRUE) %>% 
-    #     dyEvent( dt, label = dt, labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
-    #     dyRangeSelector(dateWindow = c(paste0(yr, "-01-01"), paste0(2021, "-08-31")), height = 20)  
-    # })
   })
   
 ####. #####
@@ -196,14 +185,6 @@ server <- function(input, output, session) {
 ####^^ Probe Map  ########################################################################## 
  
   
-  
-  observe({
-    req(input$wgt_SMmain_Network)
-    df <- glbSites[glbSites$Network==input$wgt_SMmain_Network, ]
-    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = df$SiteName, selected = 'Thoona' )
-    
-    
-  }) 
    
   #####   Draw the main map 
   
@@ -233,7 +214,7 @@ server <- function(input, output, session) {
           L.control.zoom({position:'topright'}).addTo(this);
         }") %>%
       addCircleMarkers(data=pts, radius=6, color = pcol(tbl$SoilMoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
-      leaflet::addLegend(title='SM', pal = pcol, values = tbl$SoilMoisture,  position = "bottomright")
+      leaflet::addLegend(title='SM', pal = pcol, values = tbl$SoilMoisture,  position = "topleft")
     
   })
   
@@ -246,7 +227,6 @@ server <- function(input, output, session) {
     bits <- str_split( p$id, '!')
     network <- bits[[1]][1]
     site <- bits[[1]][2]
-    
     updateSelectInput(session, inputId = 'wgt_SMmain_Network', selected=network)
     updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', selected=site)
   })
@@ -260,10 +240,12 @@ server <- function(input, output, session) {
       proxy %>% removeMarker(layerId="Selected")
       rec <- glbSites[glbSites$Network==input$wgt_SMmain_Network & glbSites$SiteName==input$wgt_SMmain_SiteName,]
   
-      lat <- rec$Latitude   
-      lng <- rec$Longitude   
+       lat <- rec$Latitude   
+       lng <- rec$Longitude   
         
-      proxy %>% setView(lng=lng, lat=lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(lng, lat)
+      # proxy %>% setView(lng=lng, lat=lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(lng, lat)
+       proxy %>% acm_defaults(lng, lat)
+       
       sl <- list()
       sl$Network <- input$wgt_SMmain_Network
       sl$SiteName <- input$wgt_SMmain_SiteName
@@ -279,7 +261,7 @@ server <- function(input, output, session) {
   observe({
     
     as.volumetric=T
-    print("Updatedata")
+
     req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
   
     
@@ -294,7 +276,6 @@ server <- function(input, output, session) {
       if(as.volumetric){
         mtsV <- BE$Calibrations$getAllLayersVolumeticTS(Network = RV$CurrentSite$Network, SiteName=RV$CurrentSite$SiteName, rawTS=mts, type='Available')
         RV$CurrentSiteSMTimeSeries$volSM <- mtsV
-        print(RV$CurrentSiteSMTimeSeries$volSM)
       }
     }
       
@@ -324,12 +305,20 @@ server <- function(input, output, session) {
     
     req(RV$CurrentSiteSMTimeSeries$rawSM)
         
-
-        maxVal <- max(rowSums(mtsV), na.rm = T)
+    
+    mtsV <- RV$CurrentSiteSMTimeSeries$volSM
+    
+    calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+    calibs <- makeDepthIntervals(calibs)
+    
+    bucketSize =  as.integer(sum( (calibs$DrainedUpperLimit - calibs$LowerLimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+    maxVal <- bucketSize
+    
+    #maxVal <- max(rowSums(mtsV), na.rm = T)
         bits <- str_split(names(mtsV), '_')
         updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
         lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
-        names(mts) <- paste0(updepth, "_", lowdepth)
+        names(mtsV) <- paste0(updepth, "_", lowdepth)
 
         dygraph(mtsV,  ylab =  'Vol', group = 'Main') %>%
           dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
@@ -399,10 +388,9 @@ server <- function(input, output, session) {
   
      req( RV$CurrentSiteSMTimeSeries$volSM, input$datePker)
       calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
-      print(as.Date(input$datePker))
       dt <- as.Date(input$datePker)
       day <- RV$CurrentSiteSMTimeSeries$volSM[dt]
-      print(day)
+
       if(nrow(day)>0){
         plotPAWProfile(ts = day, calibs)
       }
@@ -414,10 +402,10 @@ server <- function(input, output, session) {
    ### ^^ Render bucket colour gradient plot  ####
    output$wgt_SMmain_volProfile_colGradient <- renderPlot({
      
-     req( req( RV$CurrentSiteSMTimeSeries$volSM))
+     req( RV$CurrentSiteSMTimeSeries$volSM)
+     req(RV$CurrentSite, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
      calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
      
-     #day <- tail( RV$CurrentSiteSMTimeSeries$volSM,1)
      dt <- as.Date(input$datePker)
      day <- RV$CurrentSiteSMTimeSeries$volSM[dt]
      
@@ -445,6 +433,32 @@ server <- function(input, output, session) {
     
      data.frame('Available Moisture'=percWat) %>%
        c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
+     
+   })
+   
+   
+   output$vtext <- renderText({
+     
+     req( req( RV$CurrentSiteSMTimeSeries$volSM))
+     calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+     calibs <- makeDepthIntervals(calibs)
+     
+     bucketSize =  as.integer(sum( (calibs$DrainedUpperLimit - calibs$LowerLimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+     
+     dt <- as.Date(input$datePker)
+     smvals <- RV$CurrentSiteSMTimeSeries$volSM[dt]
+     # smvals <- tail(RV$CurrentSiteSMTimeSeries$volSM, 1)
+     sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
+     
+     totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
+     percWat <- (totwat/bucketSize) * 100
+     HTML(  paste0("<p style='color:green; font-weight: bold;'><br><br>Total Bucket Size = ", round(bucketSize), " mm",
+                   "<br>Available Soil Water = ", round(totwat), " mm",
+                   "<br>Total Rain = ", '0', " mm",
+                   "<br>&nbsp;In Season Rain = ", '0', " mm",
+                   "</p>"
+     )
+     )
      
    })
    

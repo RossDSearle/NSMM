@@ -8,10 +8,28 @@ PageHeader_UI <- function() {
     
     tags$head(
       tags$style(HTML("
-      .leaflet-left .leaflet-control{
+      .leaflet-left .leaflet-control-zoom {
         visibility: hidden;
+        height: 0px;
+        vertical-align: top
       }
-    "))
+    ")),
+      
+    #  tags$style(".leaflet-control-zoom { display: none; }"),
+      
+      tags$style(HTML("
+          .leaflet .legend {
+            line-height: 10px; /* Adjust line height for label spacing */
+            font-size: 10px;   /* Adjust font size of legend labels */
+            padding: 1px;     /* Adjust padding around the legend content */
+          }
+          .leaflet .legend i {
+            width: 8px;       /* Adjust width of color boxes/symbols */
+            height: 8px;      /* Adjust height of color boxes/symbols */
+          }
+        "))
+   
+    
     ),
     
     tags$style(HTML('.container-fluid { margin-right: auto; margin-left: 0px; padding-left: 0px; padding-right: 0px }') ),

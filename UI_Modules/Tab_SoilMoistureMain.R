@@ -17,13 +17,16 @@ Tab1_UI <- function() {
              sidebarLayout(
                sidebarPanel( width = 3,
                              HTML('Click on a location in the map to view soil moisture data'),
-                             leafletOutput("wgt_SMmain_ProbeLocationeMap", width = 400, height = 400),
+                             leafletOutput("wgt_SMmain_ProbeLocationeMap", width = '100%', height = 400),
                              
-                             HTML('<BR><BR>'),
+                             HTML('<BR>'),
                              selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$Network, width = 350, selected='NSMM'),
                              selectInput("wgt_SMmain_SiteName", "Site", choices=NULL, width = 350),
                              
-                             helpText("Select map date below"), 
+                             actionLink('wgt_SaveCookie', 'Save as default site'),
+                             HTML('<BR><BR>'),
+                             
+                            # helpText("Select date below"), 
                              sliderInput("datePker", "Dates:", min = as.Date("2025-01-01","%Y-%m-%d"), max = Sys.Date()-5, value=Sys.Date()-5, timeFormat="%Y-%m-%d",
                                          animate = animationOptions(interval = 300, loop = TRUE)),
                              
@@ -31,7 +34,7 @@ Tab1_UI <- function() {
                           #   sliderInput("wgt_SMmain_datePker", "Dates:", min = as.Date("2017-01-01","%Y-%m-%d"), max = as.Date("2021-09-01","%Y-%m-%d"), value=as.Date("2021-07-01"), timeFormat="%Y-%m-%d",
                           #               animate = animationOptions(interval = 300, loop = TRUE)),
                             # sliderInput("tempCor", "Temp Correction:", min = 0, max = 0.5, value=0.3),
-                             
+                            
                              HTML('<BR><BR><BR><BR><BR><BR>')
                              
                              
@@ -46,8 +49,11 @@ Tab1_UI <- function() {
                  
                  fluidRow( column(4, plotOutput("wgt_SMmain_volProfile", width = "350px", height = "450px")), 
                            column(3, plotOutput("wgt_SMmain_volProfile_colGradient", width = "300px", height = "450px")),
-                           column(2, c3Output("wgt_SMmain_guage", width = "450px", height = "450px")),
-                           column(1)
+                           column(5, 
+                                 htmlOutput('vtext'),
+                                  c3Output("wgt_SMmain_guage", width = "400px", height = "250px")
+                                  ),
+                          
                         ),
                            
  
