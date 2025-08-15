@@ -20,7 +20,7 @@ Tab1_UI <- function() {
                              leafletOutput("wgt_SMmain_ProbeLocationeMap", width = '100%', height = 400),
                              
                              HTML('<BR>'),
-                             selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$Network, width = 350, selected='NSMM'),
+                             selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$Network[2], width = 350, selected='NSMM'),
                              selectInput("wgt_SMmain_SiteName", "Site", choices=NULL, width = 350),
                              
                              actionLink('wgt_SaveCookie', 'Save as default site'),
