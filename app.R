@@ -31,8 +31,8 @@ library(cookies)
 # setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/app.R'
 
 machineName <- as.character(Sys.info()['nodename'])
-if (machineName=='soils-discover2') {
-  source('/srv/plumber/SensorFederator2/Backends/ObjectStore.R')
+if (machineName=='landscapes-soils') {
+  source('/srv/plumber/TERNLandscapes/SoilMoistureProbesAPI/Backends/ObjectStore.R')
 }else{
   setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2'
   source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
