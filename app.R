@@ -21,7 +21,6 @@ library(sf)
 library(reactable)
 library(shinyjs)
 library(dplyr)
-#library(flexdashboard)
 library(plotrix)
 library(c3)
 library(cookies)
@@ -54,8 +53,9 @@ source('Functions/Plotting.R')
 ######^^^ Get DB Data  ####
 glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
 glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
-glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
-SensorSummary <<- BE$Shared$Reporting$SensorSummary()
+#glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
+glbHarvestDates <<- data.frame(bob=as.Date(01-01-2000))
+#SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 glbCurrentSurfaceSoilMoisture <<- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
 
 
@@ -194,17 +194,17 @@ server <- function(input, output, session) {
     tbl <- glbCurrentSurfaceSoilMoisture
     pcol <-colorNumeric(palette = 'Blues', tbl$SoilMoisture)
     
-    pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
+    pts <- st_as_sf(tbl, coords = c("longitude", "latitude"), crs = 4326)
     
     labs <- lapply(seq(nrow(pts)), function(i) {
-      paste0( '<li>Network : ', pts[i, ]$Network, '</li>
-                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
-                  <li>Access : ', pts[i, ]$Access, '</li>
-                  <li>Install Date : <b>', pts[i, ]$InstallDate, '</b></li>
+      paste0( '<li>Network : ', pts[i, ]$network, '</li>
+                  <li>Site Name : ', pts[i, ]$sitename, '</li>
+                  <li>Access : ', pts[i, ]$access, '</li>
+                  <li>Install Date : <b>', pts[i, ]$installdate, '</b></li>
                 
               ')})
     
-    sid <- paste0(pts$Network, '!', pts$SiteName)
+    sid <- paste0(pts$network, '!', pts$sitename)
     
     leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
       setView(lng = 135, lat = -28, zoom = 3) %>%
@@ -213,8 +213,8 @@ server <- function(input, output, session) {
         "function(el, x) {
           L.control.zoom({position:'topright'}).addTo(this);
         }") %>%
-      addCircleMarkers(data=pts, radius=6, color = pcol(tbl$SoilMoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
-      leaflet::addLegend(title='SM', pal = pcol, values = tbl$SoilMoisture,  position = "topleft")
+      addCircleMarkers(data=pts, radius=6, color = pcol(tbl$soilmoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
+      leaflet::addLegend(title='SM', pal = pcol, values = tbl$soilmoisture,  position = "topleft")
     
   })
   
@@ -707,20 +707,20 @@ server <- function(input, output, session) {
          pcol <-colorNumeric(palette = 'RdYlGn', tbl$QualityIndex)
    }
    
-   pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
+   pts <- st_as_sf(tbl, coords = c("longitude", "latitude"), crs = 4326)
    
 
    labs <- lapply(seq(nrow(pts)), function(i) {
-     paste0( '<li>Network : ', pts[i, ]$Network, '</li>
-                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
+     paste0( '<li>Network : ', pts[i, ]$network, '</li>
+                  <li>Site Name : ', pts[i, ]$sitename, '</li>
                    <li>', param, ' : ', pts[i, ][[param]], '</li>')})
 
    
    proxy <- leafletProxy("wgt_Admin_ProbeLocationsMap")
    proxy %>% clearMarkers()
    proxy %>%  clearControls()
-   proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(Network, '!', SiteName), label=lapply(labs, HTML)) 
-   proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
+   proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(network, '!', sitename), label=lapply(labs, HTML)) 
+   #proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
    
    
  })
