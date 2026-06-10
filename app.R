@@ -21,7 +21,6 @@ library(sf)
 library(reactable)
 library(shinyjs)
 library(dplyr)
-#library(flexdashboard)
 library(plotrix)
 library(c3)
 library(cookies)
@@ -48,8 +47,9 @@ queryAPI <- function(EP){
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
- # source('/srv/plumber/SoilMoistureProbesAPI/Backends/ObjectStore.R')
   APIUrl <<- 'http:'
+
+  source('/srv/plumber/TERNLandscapes/SoilMoistureProbesAPI/Backends/ObjectStore.R')
 }else{
  
  # source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/Backends/ObjectStore.R')
@@ -72,11 +72,20 @@ source('Functions/Plotting.R')
 
 
 ######^^^ Get DB Data  ####
+<<<<<<< HEAD
 #glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
 #glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
 #glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
 #SensorSummary <<- BE$Shared$Reporting$SensorSummary()
 #glbCurrentSurfaceSoilMoisture <<- BE$DataStore$Queries$LatestSurfaceSoilMoisture()
+=======
+glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
+glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+#glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
+glbHarvestDates <<- data.frame(bob=as.Date(01-01-2000))
+#SensorSummary <<- BE$Shared$Reporting$SensorSummary()
+glbCurrentSurfaceSoilMoisture <<- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
+>>>>>>> 3d3006408a73872cf4297437ab5b75a8c9be3dd7
 
 
 glbNetworks <<- queryAPI(EP = 'Networks')
@@ -226,8 +235,13 @@ server <- function(input, output, session) {
     labs <- lapply(seq(nrow(pts)), function(i) {
       paste0( '<li>Network : ', pts[i, ]$network, '</li>
                   <li>Site Name : ', pts[i, ]$sitename, '</li>
+<<<<<<< HEAD
                   <li>Current Value : ', sprintf("%.2f",  pts[i, ]$soilmoisture) , '</li>
                  
+=======
+                  <li>Access : ', pts[i, ]$access, '</li>
+                  <li>Install Date : <b>', pts[i, ]$installdate, '</b></li>
+>>>>>>> 3d3006408a73872cf4297437ab5b75a8c9be3dd7
                 
               ')})
     
@@ -747,7 +761,11 @@ server <- function(input, output, session) {
    proxy %>% clearMarkers()
    proxy %>%  clearControls()
    proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(network, '!', sitename), label=lapply(labs, HTML)) 
+<<<<<<< HEAD
   # proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
+=======
+   #proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
+>>>>>>> 3d3006408a73872cf4297437ab5b75a8c9be3dd7
    
    
  })
