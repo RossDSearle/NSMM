@@ -26,18 +26,38 @@ library(plotrix)
 library(c3)
 library(cookies)
 
+library(httr)
+library(jsonlite)
+
+
+queryAPI <- function(EP){
+  qry <- paste0(APIUrl, str_replace_all(EP, ' ', '_'))
+  print(qry)
+  resp <- httr::GET(qry)
+  if(resp$status_code==200){
+    jsn <- content(resp, type ='text', encoding = 'UTF-8')
+    df <- fromJSON(jsn)
+    return(df)
+  }else{
+    stop(paste0('There was a problem with the API query - ', qry))
+  }
+}
 
 
 # setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/app.R'
 
 machineName <- as.character(Sys.info()['nodename'])
-if (machineName=='soils-discover2') {
-  source('/srv/plumber/SensorFederator2/Backends/ObjectStore.R')
+if (machineName=='landscapes-soils') {
+ # source('/srv/plumber/SoilMoistureProbesAPI/Backends/ObjectStore.R')
+  APIUrl <<- 'http:'
 }else{
-  setwd <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2'
-  source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SensorFederator2/Backends/ObjectStore.R')
-}
+ 
+ # source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/Backends/ObjectStore.R')
+  APIUrl <<- 'http://127.0.0.1:8071/SensorAPI/'  ### need to run script to make this available - C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/WebAPI/RunAPIAsync.R
+  setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM')
+  }
 
+print(getwd())
 
 source('Secrets/configs.R')
 source('Styles/headerLayout.R')
@@ -52,13 +72,20 @@ source('Functions/Plotting.R')
 
 
 ######^^^ Get DB Data  ####
-glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
-glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
-glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
-SensorSummary <<- BE$Shared$Reporting$SensorSummary()
-glbCurrentSurfaceSoilMoisture <<- BE$Shared$Reporting$LatestSurfaceSoilMoisture()
+#glbNetworks <<- BE$Shared$Queries$doSelectQuery("select * from Networks")
+#glbSites <<-  BE$Shared$Queries$doSelectQuery("select * from Sites")
+#glbHarvestDates <<- BE$Shared$Queries$doSelectQuery('select distinct DT from HarvestLog order by DT DESC') 
+#SensorSummary <<- BE$Shared$Reporting$SensorSummary()
+#glbCurrentSurfaceSoilMoisture <<- BE$DataStore$Queries$LatestSurfaceSoilMoisture()
 
 
+glbNetworks <<- queryAPI(EP = 'Networks')
+glbSites <<- queryAPI(EP = 'Sites')
+glbHarvestDates <<- queryAPI(EP = 'RunSQLQuery?SQL=select distinct dt from HarvestLog order by dt DESC')
+SensorSummary <<-  queryAPI(EP = 'Sensors?verbose=true')
+csm <-  queryAPI(EP = 'LatestSurfaceSoilMoisture?numDays=2&SoilMoistureReadingType=RawSensor')
+csm$soilmoisture <- as.numeric(csm$soilmoisture)
+glbCurrentSurfaceSoilMoisture <<- csm
 
 
 
@@ -139,8 +166,8 @@ server <- function(input, output, session) {
   observe({
     req(input$wgt_SMmain_Network)
     
-  
-     df <- glbSites[glbSites$Network==input$wgt_SMmain_Network, ]
+     df <- glbSites[glbSites$network==input$wgt_SMmain_Network, ]
+     
      site <- ''
     isolate({
         if(!is.null(RV$Cookie$Network) && input$wgt_SMmain_Network==RV$Cookie$Network){
@@ -149,7 +176,7 @@ server <- function(input, output, session) {
          
         }
     })
-    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$SiteName), selected = site)
+    updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$sitename), selected = site)
   }) 
 
   
@@ -192,19 +219,19 @@ server <- function(input, output, session) {
     
     
     tbl <- glbCurrentSurfaceSoilMoisture
-    pcol <-colorNumeric(palette = 'Blues', tbl$SoilMoisture)
+    pcol <-colorNumeric(palette = 'Blues', tbl$soilmoisture)
     
-    pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
+    pts <- st_as_sf(tbl, coords = c("longitude", "latitude"), crs = 4326)
     
     labs <- lapply(seq(nrow(pts)), function(i) {
-      paste0( '<li>Network : ', pts[i, ]$Network, '</li>
-                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
-                  <li>Access : ', pts[i, ]$Access, '</li>
-                  <li>Install Date : <b>', pts[i, ]$InstallDate, '</b></li>
+      paste0( '<li>Network : ', pts[i, ]$network, '</li>
+                  <li>Site Name : ', pts[i, ]$sitename, '</li>
+                  <li>Current Value : ', sprintf("%.2f",  pts[i, ]$soilmoisture) , '</li>
+                 
                 
               ')})
     
-    sid <- paste0(pts$Network, '!', pts$SiteName)
+    sid <- paste0(pts$network, '!', pts$sitename)
     
     leaflet::leaflet() %>% addProviderTiles('Esri.WorldImagery') %>%
       setView(lng = 135, lat = -28, zoom = 3) %>%
@@ -213,8 +240,8 @@ server <- function(input, output, session) {
         "function(el, x) {
           L.control.zoom({position:'topright'}).addTo(this);
         }") %>%
-      addCircleMarkers(data=pts, radius=6, color = pcol(tbl$SoilMoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
-      leaflet::addLegend(title='SM', pal = pcol, values = tbl$SoilMoisture,  position = "topleft")
+      addCircleMarkers(data=pts, radius=6, color = pcol(tbl$soilmoisture), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~sid, label=lapply(labs, HTML)) %>%
+      leaflet::addLegend(title='SM', pal = pcol, values = tbl$soilmoisture,  position = "topleft")
     
   })
   
@@ -238,10 +265,10 @@ server <- function(input, output, session) {
       
       proxy <- leafletProxy("wgt_SMmain_ProbeLocationeMap")
       proxy %>% removeMarker(layerId="Selected")
-      rec <- glbSites[glbSites$Network==input$wgt_SMmain_Network & glbSites$SiteName==input$wgt_SMmain_SiteName,]
+      rec <- glbSites[glbSites$network==input$wgt_SMmain_Network & glbSites$sitename==input$wgt_SMmain_SiteName,]
   
-       lat <- rec$Latitude   
-       lng <- rec$Longitude   
+       lat <- rec$latitude   
+       lng <- rec$longitude   
         
       # proxy %>% setView(lng=lng, lat=lat, input$wgt_SMmain_ProbeLocationeMap_zoom) %>% acm_defaults(lng, lat)
        proxy %>% acm_defaults(lng, lat)
@@ -266,8 +293,8 @@ server <- function(input, output, session) {
   
     
     isolate({
-    idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
-                  & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture  )
+    idxs <- which(SensorSummary$network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
+                  & SensorSummary$datatype == BE$Shared$Constants$knownFeatures$SoilMoisture  )
     
     if(length(idxs)>0){
       mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
@@ -661,40 +688,40 @@ server <- function(input, output, session) {
    if(mt=='Depth'){
          param <- 'Depth'
          legTitle = 'Max Sensor Depth'
-         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Depth=max(LowerDepth))
-         pcol<-colorNumeric(palette = "viridis", tbl$Depth)
+         tbl <- SensorSummary %>% group_by(network, siteName) %>% summarise(Latitude = first(latitude), Longitude = first(longitude), Depth=max(lowerdepth))
+         pcol<-colorNumeric(palette = "viridis", tbl$depth)
      
      }else if(mt=='Network'){
          param <- 'Network'
          legTitle = 'Network'
-         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude))
-         pcol<-colorFactor(palette = "viridis", tbl$Network)
+         tbl <- SensorSummary %>% group_by(network, sitename) %>% summarise(Latitude = first(latitude), Longitude = first(longitude))
+         pcol<-colorFactor(palette = "viridis", tbl$network)
      
      }else if(mt=='Length of Record'){
          param <- 'Length'
          legTitle = 'Duration'
-         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude), Length=max(Count))
+         tbl <- SensorSummary %>% group_by(network, sitename) %>% summarise(Latitude = first(latitude), Longitude = first(longitude), Length=max(count))
          pcol <-colorNumeric(palette = "plasma", tbl$Length)
    
      }else if(mt=='Latest Surface Moisture'){
           param = 'SoilMoisture'
           legTitle = 'Surface Soil Moisture'
           tbl <- glbCurrentSurfaceSoilMoisture
-          pcol <-colorNumeric(palette = 'Blues', tbl$SoilMoisture)
+          pcol <-colorNumeric(palette = 'Blues', tbl$soilmoisture)
    
     }else if(mt=='All Active'){
          param <- 'allActive'
          legTitle = 'All Active'
-         sites <- unique(SensorSummary[c('Network', 'SiteName')])
+         sites <- unique(SensorSummary[c('network', 'sitename')])
          odf <- data.frame()
            for (i in 1:nrow(sites)) {
              rec <- sites[i,]
              s <- rec$SiteName   
              n <- rec$Network 
-             sensors <- SensorSummary[SensorSummary$Network==n & SensorSummary$SiteName==s,]
+             sensors <- SensorSummary[SensorSummary$network==n & SensorSummary$sitename==s,]
              allActive =  !any(sensors$IsActive==F)
-             rdf <- data.frame(Network=n, SiteName=s, Latitude=sensors$Latitude[1], Longitude=sensors$Longitude[1], allActive=allActive )
-             rdf$allActive <- ifelse(rdf$allActive, "Yes", "No")
+             rdf <- data.frame(Network=n, SiteName=s, Latitude=sensors$latitude[1], Longitude=sensors$longitude[1], allActive=allactive )
+             rdf$allactive <- ifelse(rdf$allactive, "Yes", "No")
              odf <- rbind(odf, rdf)
            }
          tbl<-odf
@@ -703,24 +730,24 @@ server <- function(input, output, session) {
      }else if(mt=='Quality Index'){
          param = 'QualityIndex'
          legTitle = 'Quality Index'
-         tbl <- SensorSummary %>% group_by(Network, SiteName) %>% summarise(Latitude = first(Latitude), Longitude = first(Longitude),  QualityIndex=mean(QualityIndex))
-         pcol <-colorNumeric(palette = 'RdYlGn', tbl$QualityIndex)
+         tbl <- SensorSummary %>% group_by(network, sitename) %>% summarise(Latitude = first(latitude), Longitude = first(longitude),  QualityIndex=mean(qualityindex))
+         pcol <-colorNumeric(palette = 'RdYlGn', tbl$qualityindex)
    }
    
-   pts <- st_as_sf(tbl, coords = c("Longitude", "Latitude"), crs = 4326)
+   pts <- st_as_sf(tbl, coords = c("longitude", "latitude"), crs = 4326)
    
 
    labs <- lapply(seq(nrow(pts)), function(i) {
-     paste0( '<li>Network : ', pts[i, ]$Network, '</li>
-                  <li>Site Name : ', pts[i, ]$SiteName, '</li>
+     paste0( '<li>Network : ', pts[i, ]$network, '</li>
+                  <li>Site Name : ', pts[i, ]$sitename, '</li>
                    <li>', param, ' : ', pts[i, ][[param]], '</li>')})
 
    
    proxy <- leafletProxy("wgt_Admin_ProbeLocationsMap")
    proxy %>% clearMarkers()
    proxy %>%  clearControls()
-   proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(Network, '!', SiteName), label=lapply(labs, HTML)) 
-   proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
+   proxy %>%  addCircleMarkers(data=pts, radius=6, color = pcol(tbl[[param]]), stroke=FALSE, fillOpacity=1, group="locations", layerId = ~paste0(network, '!', sitename), label=lapply(labs, HTML)) 
+  # proxy %>%  leaflet::addLegend(title=legTitle, pal = pcol, values = tbl[[param]],  position = "bottomright")
    
    
  })
@@ -728,7 +755,7 @@ server <- function(input, output, session) {
  observeEvent(input$wgt_Admin_ProbeLocationsMap_marker_click, { 
    p <- input$wgt_Admin_ProbeLocationsMap_marker_click  # typo was on this line
    bits <- str_split(p$id, '!')
-  sdf <- BE$Shared$Reporting$SensorSummary(filter =  paste0(" Networks.Network = '", bits[[1]][1], "' and Sites.SiteName = '", bits[[1]][2], "'"))
+  sdf <- BE$Shared$Reporting$SensorSummary(filter =  paste0(" networks.network = '", bits[[1]][1], "' and sites.sitename = '", bits[[1]][2], "'"))
    RV$CurrentAdminSiteSensorInfo <- sdf
  })
  
