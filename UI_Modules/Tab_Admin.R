@@ -60,7 +60,7 @@ hidden(tabPanel("Admin",  icon = icon("toolbox", tags$style()),
                         HTML(paste0('<div style="min-width:80px;float:left;display:inline;text-align:right;margin-right:10px;font-weight: bold;">
                                     <span style="vertical-align: -8px;">Datatype</span></div>')),
                         HTML(paste0('<div style="max-width:200px;  float:left; display: inline;"><span> ', 
-                             selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterDatatype', label=NULL, choices = c('All', BE$Shared$Constants$knownFeatures)),
+                             selectInput(inputId = 'wgt_Admin_SensorSummaryTable_FilterDatatype', label=NULL, choices = c('All', glbSensorDataTypes)),
                                   '</span></div>')),
                         
                        

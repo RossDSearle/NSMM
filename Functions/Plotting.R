@@ -1,15 +1,15 @@
 
 
 plotPAWProfile <- function(ts, calibs, title, bktSize=null){
-  calibs[1,]$UpperDepth <- 0
+  calibs[1,]$upperdepth <- 0
   
-  sbx <- c(calibs$LowerLimit, rev(calibs$DrainedUpperLimit))
-  sby <- c(calibs$UpperDepth/10, rev(calibs$UpperDepth/10))
-  water <- c(calibs$LowerLimit, rev((calibs$LowerLimit)+as.numeric(ts)))
+  sbx <- c(calibs$lowerlimit, rev(calibs$drainedupperlimit))
+  sby <- c(calibs$upperdepth/10, rev(calibs$upperdepth/10))
+  water <- c(calibs$lowerlimit, rev((calibs$lowerlimit)+as.numeric(ts)))
   
   plot( 0, type="n", main=paste(''), 
         xlab='Volumeteric Soil Moisture', ylab='Soil Depth (cm)',
-        yaxs = "i", xaxs = "i", xlim = c((min(calibs$LowerLimit))-2, (max(calibs$DrainedUpperLimit)) + 2), ylim = rev(range(c(0,calibs$UpperDepth/10))),
+        yaxs = "i", xaxs = "i", xlim = c((min(calibs$lowerlimit))-2, (max(calibs$drainedupperlimit)) + 2), ylim = rev(range(c(0,calibs$upperdepth/10))),
         cex.lab = 1.5
   )
   
@@ -28,9 +28,14 @@ plotPAWProfile <- function(ts, calibs, title, bktSize=null){
 
 plotPAWProfileGradientColours <- function(ts, calibs, title, bktSize=null){
   
-  calibs[1,]$UpperDepth <- 0
+  calibs[1,]$upperdepth <- 0
   
-  cols <- colorRampPalette(c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))( 100 )
+  mm <- calibs$lowerdepth - calibs$upperdepth
+  volperc <- (ts/mm) * 100
+  uperc <- (calibs$drainedupperlimit - calibs$lowerlimit)
+  upperperc <- calibs$drainedupperlimit - calibs$lowerlimit
+  
+  cols <- colorRampPalette(c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))( ceiling(max(volperc))) 
   
   plot( 0, type="n", main=paste(''), 
         xlab='Available Moisture Distribution', 
@@ -38,7 +43,7 @@ plotPAWProfileGradientColours <- function(ts, calibs, title, bktSize=null){
         yaxs = "i", 
        xaxt = "n", 
         xlim = c(0, 1.5), 
-        ylim = rev(range(c(0,calibs$UpperDepth/10))),
+        ylim = rev(range(c(0,calibs$upperdepth/10))),
         cex.lab = 1.5
   )
   
@@ -47,26 +52,27 @@ plotPAWProfileGradientColours <- function(ts, calibs, title, bktSize=null){
  plotrix::color.legend(1.2,20,1.3,150,col.labels, rev(cols),gradient="y", align = 'rb')
  
   
-  wdf <- data.frame(1,calibs$UpperDepth/10, calibs$LowerDepth/10, t(ts), calibs$LowerLimit, calibs$DrainedUpperLimit)
+  wdf <- data.frame(1,calibs$upperdepth/10, calibs$lowerdepth/10, t(volperc), calibs$lowerlimit, calibs$drainedupperlimit)
   names(wdf) <- c('sid', 'upper', 'lower', 'val', 'LL', 'DUL')
   awcSpline <- splineVals(indf=wdf, atts=c('val', 'LL', 'DUL'))
   
   
   
   
-  wc <- awcSpline[[1]]$est_1cm
-  ll <- awcSpline[[2]]$est_1cm
-  ul <- awcSpline[[3]]$est_1cm
+  moistPerc <- awcSpline[[1]]$est_1cm$SPLINED_VALUE
+  ll <- awcSpline[[2]]$est_1cm$SPLINED_VALUE
+  ul <- awcSpline[[3]]$est_1cm$SPLINED_VALUE
   
-  for (i in 1:nrow(wc)) {
+  for (i in 1:length(moistPerc)) {
     
-    val <- wc[i,]
-    l <- ll[i,]
-    u <- ul[i,]
+    val <- moistPerc[i]
+    print(val)
+    l <- ll[i]
+    u <- ul[i]
 
-    c <- as.integer(val$SPLINED_VALUE / (u$SPLINED_VALUE - l$SPLINED_VALUE) *100)
+    c <- as.integer(val)
     x = c(0,1,1,0, 0)
-    y = c(l$UD, l$UD,l$LD, l$LD, l$UD)
+    y = c(i, i,i+1, i+1, i)
     polygon(x,y,col=cols[c],   border=cols[c])
     
   }

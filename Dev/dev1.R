@@ -1,21 +1,29 @@
+library(listviewer)
+
 Network='NSMM'
-SiteName='B Farmers'
+SiteName='Thoona'
 
 RV <- list()
-RV$CurrentSite$SiteName='B Farmers'
-RV$CurrentSite$Network='NSMM'
+RV$CurrentSite$SiteName=SiteName
+RV$CurrentSite$Network=Network
+RV$Email <- 'ross.searle@gmail.com'
 
+session <- list()
+session$token <- '1234567890'
 
-
-
+input <- list()
+input$wgt_SMmain_Network <- 'NSMM'
+input$wgt_SMmain_SiteName <- 'Thoona'
+input$datePker <- as.Date('2026-06-11')
 
 soilBucketDataSrc='SLGApedo'
 
 calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", Network, "' and SiteName='", SiteName, "'"))
 
 SensorSummary <<- BE$Shared$Reporting$SensorSummary()
-idxs <- which(SensorSummary$Network==RV$CurrentSite$Network & SensorSummary$SiteName==RV$CurrentSite$SiteName
-              & SensorSummary$DataType == BE$Shared$Constants$knownFeatures$SoilMoisture )
+SensorSummary <<- BE$DataStore$Queries$getSensorInfo()
+idxs <- which(SensorSummary$network==RV$CurrentSite$Network & SensorSummary$sitename==RV$CurrentSite$SiteName
+              & SensorSummary$datatype == BE$Shared$Constants$knownFeatures$SoilMoisture )
 
 
 mts <- BE$Shared$SensorData$getSensorDataFromDBUsingSensorSummaryRecs(SensorSummary[idxs,])
