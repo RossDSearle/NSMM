@@ -67,6 +67,7 @@ getGlobalData <- function(){
   csm$soilmoisture <- as.numeric(csm$soilmoisture)
   ol$glbCurrentSurfaceSoilMoisture <- csm
   ol$glbSensorDataTypes <- queryAPI(EP = 'SensorDataTypes')
+  ol$CalibrationInfo <-queryAPI(EP = 'BucketInfo')
   
   return(ol)
   
@@ -91,7 +92,7 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
       
     
   }else{
-    datacache <- user_temp_dir
+    datacache <- user
     CacheDir <- paste0(datacache, '/', what)
     if(!dir.exists(CacheDir)){dir.create(CacheDir, recursive = T)}
     cachefile <- paste0(CacheDir, '/', Network, '_', SiteName, '_', Sys.Date(), '_', what, '_Data.rds')

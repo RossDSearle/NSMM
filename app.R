@@ -29,6 +29,7 @@ library(cookies)
 library(stringr)
 library(httr)
 library(jsonlite)
+library(listviewer)
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
@@ -70,6 +71,7 @@ glbHarvestDates <<- gd$glbHarvestDates
 glbSensorSummary <<-  gd$SensorSummary
 glbCurrentSurfaceSoilMoisture <<- gd$glbCurrentSurfaceSoilMoisture
 glbSensorDataTypes <<- gd$glbSensorDataTypes
+glbCalibrationInfo <<- gd$CalibrationInfo 
 
 
 
@@ -389,8 +391,9 @@ server <- function(input, output, session) {
     output$wgt_SMmain_volProfile <- renderPlot({
   
      req(  RV$CurrentSiteData$TS$volumetric_mm, input$datePker)
-      url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
-      calibs <- queryAPI(EP = url )
+      # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
+      # calibs <- queryAPI(EP = url )
+      calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
       dt <- input$datePker
       day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
 
@@ -406,8 +409,10 @@ server <- function(input, output, session) {
    output$wgt_SMmain_volProfile_colGradient <- renderPlot({
      
      req( RV$CurrentSiteData$TS$volumetric_mm)
-     url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
-     calibs <- queryAPI(EP = url )
+     # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
+     # calibs <- queryAPI(EP = url )
+     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
+     
      dt <- as.Date(input$datePker)
      day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
      
@@ -419,16 +424,16 @@ server <- function(input, output, session) {
    ### ^^ Render Gauge  ####
    output$wgt_SMmain_guage <- renderC3({
      
-     req( req( RV$CurrentSiteSMTimeSeries$volSM))
-     calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
-     calibs <- makeDepthIntervals(calibs)
+     req( req(  RV$CurrentSiteData$TS$volumetric_mm))
+     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
      
-    bucketSize =  as.integer(sum( (calibs$DrainedUpperLimit - calibs$LowerLimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+     
+    bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$intervallower-calibs$intervalupper)))
      
     dt <- as.Date(input$datePker)
-    smvals <- RV$CurrentSiteSMTimeSeries$volSM[dt]
+    smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
    # smvals <- tail(RV$CurrentSiteSMTimeSeries$volSM, 1)
-    sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
+    sdf <- data.frame(upperD=calibs$intervalupper, lowerD=calibs$intervallower, vals=as.numeric(as.character(smvals))/100)
    
    totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
    percWat <- (totwat/bucketSize) * 100
@@ -637,9 +642,9 @@ server <- function(input, output, session) {
    
  output$wgtNetworkSummaryListView <- renderJsonedit({
    
-   s <- BE$Admin$generateDBSummary()
+  # s <- BE$Admin$generateDBSummary()
    
-   jsonedit(s)
+  # jsonedit(s)
  })
  
  

@@ -3,6 +3,9 @@ library(listviewer)
 Network='NSMM'
 SiteName='Thoona'
 
+fp <- file.path(tempdir(), paste0('NSMMDataCache'))
+unlink(fp, recursive = T)
+
 RV <- list()
 RV$CurrentSite$SiteName=SiteName
 RV$CurrentSite$Network=Network
