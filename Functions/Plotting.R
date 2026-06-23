@@ -1,5 +1,20 @@
 
 
+plotNoDataMessage <- function(textColour='red'){
+  
+  plot( 0, type="n", main=paste(''), 
+        xlab='', ylab='',
+        yaxs = "i", xaxs = "i", xlim = c(0,2), ylim = c(0,1),
+        cex.lab = 1.5,
+        axes = FALSE
+  )
+  text(x = 0.1, y = 0.9, labels = "No data available", col = textColour, cex = 1.8, font = 2, adj = 0)
+  text(x = 0.1, y = 0.8, labels = "for this date", col = textColour, cex = 1.8, font = 2, adj = 0)
+}
+
+
+
+
 plotPAWProfile <- function(ts, calibs, title, bktSize=null){
   calibs[1,]$upperdepth <- 0
   
@@ -66,7 +81,6 @@ plotPAWProfileGradientColours <- function(ts, calibs, title, bktSize=null){
   for (i in 1:length(moistPerc)) {
     
     val <- moistPerc[i]
-    print(val)
     l <- ll[i]
     u <- ul[i]
 

@@ -13,6 +13,7 @@
 dev=T
 
 library(shiny)
+library(shinybusy)
 library(htmlwidgets)
 library(bslib)
 library(DT)
@@ -74,12 +75,67 @@ glbSensorDataTypes <<- gd$glbSensorDataTypes
 glbCalibrationInfo <<- gd$CalibrationInfo 
 
 
+rainChartMaxYVal = 30
+
 
 ####.  #####
 #### _______ UI CODE ____________  #########
 ####.  #####
 
 ui <- fluidPage(
+  
+  
+  tags$head(
+    tags$style(HTML("
+      #shiny-notification-panel {
+        position: fixed;
+        top: 30%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        bottom: auto;
+        right: auto;
+        width: 600px; /* Adjust width as needed */
+        max-width: 90%;
+        z-index: 9999; /* Ensures it stays on top of other elements */
+      }
+    ")),
+    
+    
+    tags$style(HTML("
+        div[id^='DyTSlegendDiv']  {
+  margin-bottom: 2px !important; /* Set a very tight bottom margin */
+  padding: 0 !important;
+   display: inline-block; 
+          font-size: 10px !important;
+          font-weight: bold;
+          line-height: 1.2;
+  
+  }
+         
+      "))
+    
+    ),
+  
+  add_busy_spinner(spin = "flower", position = "full-page", color = 'darkgreen', timeout = 1000, height = '80px', ),
+  tags$style(HTML("
+  .shinybusy-overlay {
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+")),
+  
+  # Custom CSS to hide the colored bar and match the background track
+  tags$head(
+    tags$style(HTML("
+      .irs-bar, .irs-bar-edge {
+        background: #e1e4e9 !important;
+        border-top: 1px solid #d4d7dc !important;
+        border-bottom: 1px solid #d4d7dc !important;
+      }
+    "))
+  ),
+  
+  
 
   PageHeader_UI(),
   
@@ -122,13 +178,16 @@ server <- function(input, output, session) {
 
  
 #### ^ Set up a temp directory per user  ####
-  user_temp_dir <- file.path(tempdir(), paste0('NSMMDataCache/', session$token))
+  user_temp_dir <- file.path(tempdir(), paste0('NSMMDataCache/', session$token)) # if dev=T this is set to null in the call to getAllSiteData - may leave it this way
   if (!dir.exists(user_temp_dir)) {
     dir.create(user_temp_dir, recursive = TRUE)
   }
   session$onSessionEnded(function() {
     if (dir.exists(user_temp_dir)) {
-      unlink(user_temp_dir, recursive = TRUE)
+    #  if(!dev){
+        unlink(user_temp_dir, recursive = TRUE)
+    #  }
+      
     }
   })  
 
@@ -176,12 +235,18 @@ server <- function(input, output, session) {
     updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$sitename), selected = site)
   }) 
 
-  
-  observe({
-    req(input$wgt_SMmain_SiteName)
-    input$wgt_SaveCookie
+  ###  ^ Save the Site cookie  ####
+  observeEvent(input$wgt_SaveCookie, {
+  req(input$wgt_SMmain_SiteName,input$wgt_SMmain_Network)
    isolate( set_cookie(cookie_name = "NSMMDefaultSite", cookie_value = paste0(input$wgt_SMmain_Network,'|',input$wgt_SMmain_SiteName), session = session))
-    
+   showNotification(
+     paste("Site saved :",  paste0(input$wgt_SMmain_Network,' - ',input$wgt_SMmain_SiteName)), 
+     type = "message", 
+     duration = 3,
+     closeButton = T
+        
+      
+   )
   })
 
   observe({
@@ -290,10 +355,29 @@ server <- function(input, output, session) {
   
   observe({
     req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
-    isolate({
-        sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email=RV$Email, makeTS = T)
-        RV$CurrentSiteData <- sd
-        }) 
+   # isolate({
+      if(dev){user_temp_dir=NULL}
+    
+    
+    tryCatch({
+      sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email=RV$Email, makeTS = T)
+      RV$CurrentSiteData <- sd
+      
+    }, error = function(e) {
+      showNotification(
+        paste("Failed to get the data for this site :", e$message), 
+        type = "error", 
+        duration = 10,
+        closeButton=T
+        
+      )
+    })
+    
+    
+    
+
+    #    }) 
+   
   })
   
   
@@ -328,15 +412,22 @@ server <- function(input, output, session) {
     maxVal <- max(rowSums(mtsV), na.rm = T)
         bits <- str_split(names(mtsV), '_')
         updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
-        lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
-        names(mtsV) <- paste0(updepth, "_", lowdepth)
-
+        lowdepth <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName, ]$lowerdepth/10
+        names(mtsV) <- paste0(updepth, " to ", lowdepth, ' cm ')
+                                                      # , main = 'Total Volumetric Water'
         dygraph(mtsV,  ylab =  'Vol', group = 'Main') %>%
           dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
 
           dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
           dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
-          dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+          #dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+          
+          dyLegend(
+            labelsDiv = "DyTSlegendDivVolId",
+            labelsSeparateLines = TRUE
+          )  %>%
+          
+          
         dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
       #  dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
         
@@ -350,19 +441,26 @@ server <- function(input, output, session) {
 
          smTS <-RV$CurrentSiteData$TS$rawProbe
 
-         maxVal <- max(smTS, na.rm = T)
+         #maxVal <- max(smTS, na.rm = T)
+         maxVal <- max(rowSums(smTS), na.rm = T)
 
          bits <- str_split(names(smTS), '_')
          updepth <- as.numeric(sapply(bits, function (x) x[2]))/10
-         lowdepth <- as.numeric(sapply(bits, function (x) x[3]))/10
-         names(smTS) <- paste0(updepth, "_", lowdepth)
-
-         dygraph(smTS,  group = 'Main', main = 'Soil Moisture') %>%
-           dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE)  %>%
-           dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
-           dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
+         lowdepth <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName, ]$lowerdepth/10
+         names(smTS) <- paste0(updepth, " to ", lowdepth, ' cm ')
+        
+                                        # , main = 'Raw Probe Values'
+         dygraph(smTS,  group = 'Main') %>%
+          dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
+           dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+           dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
+           
+           dyLegend(
+             labelsDiv = "DyTSlegendDivRawId",
+             labelsSeparateLines = TRUE
+           )
  
-          # dyLegend(width = 400) 
+
      # dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
 
      #}
@@ -372,35 +470,54 @@ server <- function(input, output, session) {
      
      req(RV$CurrentSiteData, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
 
+     print(RV$CurrentSiteData)
+     
+     
      if(!is.null(RV$CurrentSiteData$TS$Rainfall)){
        rainTS <- RV$CurrentSiteData$TS$Rainfall 
-       maxVal <- max(rainTS, na.rm = T)
+       #maxVal <- max(rainTS, na.rm = T)
+       maxVal <- rainChartMaxYVal
        
-       names(rainTS) <- 'Rainfall (mm)'
-       dygraph(rainTS,  group = 'Main', main = 'Rainfall' ) %>%
+       names(rainTS) <- 'Daily Total'
+                                       #, main = 'Rainfall'
+       dygraph(rainTS,  group = 'Main' ) %>%
          dyBarChart() %>% 
-         dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+       #  dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
          dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal)) %>%
          dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>% 
-         dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
+         dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)  %>% 
+       dyLegend(
+         labelsDiv = "DyTSlegendDivRainId",
+         labelsSeparateLines = TRUE
+       )  
      }
    })
+   
+   
+   output$wgtHTMLBomStation <- renderUI({
+     req(RV$CurrentSiteData)
+     tags$div(style="font-weight: bold;font-size: 10px !important;font-weight: bold;  line-height: 1.2;", 
+              HTML(paste('<BR>BoM Station : ', RV$CurrentSiteData$BoM_Station_Name, '<BR>Distance from Probe : ', RV$CurrentSiteData$Station_Distance, '<BR><BR>')))
+   })
+   
+   
+   
    
    
    ### ^^ Render bucket plot  ####
     output$wgt_SMmain_volProfile <- renderPlot({
   
      req(  RV$CurrentSiteData$TS$volumetric_mm, input$datePker)
-      # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
-      # calibs <- queryAPI(EP = url )
+
       calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
       dt <- input$datePker
       day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
 
-      if(nrow(day)>0){
+      if(all(is.na(day))){
+        plotNoDataMessage('darkgreen')
+      }else{
         plotPAWProfile(ts = day, calibs)
       }
-      
     })
    
    
@@ -415,8 +532,18 @@ server <- function(input, output, session) {
      
      dt <- as.Date(input$datePker)
      day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
+
+     if(all(is.na(day))){
+       plotNoDataMessage('darkgreen')
+     }
+     else{
+       plotPAWProfileGradientColours(ts = day, calibs)
+     }
+    
+     # validate(
+     #   need(!is.na(day[1]), "No data available: Value is NA")
+     # )
      
-     plotPAWProfileGradientColours(ts = day, calibs)
      
    })
    
@@ -424,23 +551,23 @@ server <- function(input, output, session) {
    ### ^^ Render Gauge  ####
    output$wgt_SMmain_guage <- renderC3({
      
-     req( req(  RV$CurrentSiteData$TS$volumetric_mm))
-     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-     
-     
-    bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$intervallower-calibs$intervalupper)))
-     
-    dt <- as.Date(input$datePker)
-    smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-   # smvals <- tail(RV$CurrentSiteSMTimeSeries$volSM, 1)
-    sdf <- data.frame(upperD=calibs$intervalupper, lowerD=calibs$intervallower, vals=as.numeric(as.character(smvals))/100)
-   
-   totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
-   percWat <- (totwat/bucketSize) * 100
-    
-     data.frame('Available Moisture'=percWat) %>%
-       c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
-     
+   #   req( req(  RV$CurrentSiteData$TS$volumetric_mm))
+   #   calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
+   # 
+   #  bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$intervallower-calibs$intervalupper)))
+   # 
+   #  dt <- as.Date(input$datePker)
+   #  smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
+   # 
+   #  print(tail(smvals, 10))
+   #  sdf <- data.frame(upperD=calibs$intervalupper, lowerD=calibs$intervallower, vals=as.numeric(as.character(smvals))/100)
+   # 
+   # totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
+   # percWat <- (totwat/bucketSize) * 100
+   # 
+   #   data.frame('Available Moisture'=percWat) %>%
+   #     c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
+
    })
    
    

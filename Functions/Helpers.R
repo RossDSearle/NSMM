@@ -1,6 +1,8 @@
 
 
 queryAPI <- function(EP){
+  
+  EP <- utils::URLencode(EP)
   qry <- paste0(APIUrl, str_replace_all(EP, ' ', '_'))
   print(qry)
   resp <- httr::GET(qry)
@@ -14,7 +16,7 @@ queryAPI <- function(EP){
 }
 
 
-getTimeSeries <- function(df, filter=NULL){
+getTimeSeries <- function(df, filter=NULL, fill.breaks=T){
   
   colIdxs <- which(str_starts(colnames(df), filter))
   
@@ -24,6 +26,12 @@ getTimeSeries <- function(df, filter=NULL){
      tdf <- df[, c(idxDate, colIdxs)]
       ts <- xts::xts(tdf[, -1], order.by = tdf$Date)
       names(ts) <- nms[colIdxs]
+      
+      if(fill.breaks){
+        ts <- na.trim(ts)
+        ts <- na.approx(ts)
+      }
+      
       return(ts)
 
   }else{
@@ -31,12 +39,16 @@ getTimeSeries <- function(df, filter=NULL){
   }
 }
 
+
+
+
 getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T){
   
   ol <- list()
   ol$QueryDate <- Sys.Date()
   ol$Network <- Network
   ol$SiteName <- SiteName 
+  
   
   silo <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='silo', Email = Email)
   ol$BoM_Station_Number <- silo$Station_Number
@@ -53,6 +65,7 @@ getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NU
     ol$TS$Rainfall <- getTimeSeries(df=ol$DF$Silo, filter='daily_rain')
   }
   
+  print(str(ol,max.level = 1))
   return(ol)
 }
 
@@ -80,15 +93,19 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
     datacache <- paste0(tempdir(), '/NSMMDataCache')
     CacheDir <- paste0(datacache, '/', what)
     if(!dir.exists(CacheDir)){dir.create(CacheDir, recursive = T)}
-    cachefile <- paste0(CacheDir, '/',  Sys.Date(), '_', what, '_Data.rds')
+    cachefile <- paste0(CacheDir, '/',  Sys.Date(), '_', Network, '_', SiteName, '_', what, '_Data.rds')
     
     fls <- list.files(CacheDir, full.names = T,recursive = F)
-        if(length(fls)>0){
-          idxs <- which(!fls %in% cachefile)
-          if(length(idxs)>0){
-            unlink(fls)
-          }
-        }
+        # if(length(fls)>0){
+        #   idxs <- which(!fls %in% cachefile)
+        #   if(length(idxs)>0){
+        #     unlink(fls)
+        #   }
+        # }
+    idxs <- which(!stringr::str_starts(basename(fls), as.character(Sys.Date())))
+    if(length(idxs) > 0){
+      unlink(fls[idxs])
+    }
       
     
   }else{

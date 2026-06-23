@@ -2,14 +2,17 @@ library(listviewer)
 
 Network='NSMM'
 SiteName='Thoona'
+SiteName='B Farmers'
 
-fp <- file.path(tempdir(), paste0('NSMMDataCache'))
-unlink(fp, recursive = T)
+#fp <- file.path(tempdir(), paste0('NSMMDataCache'))
+#unlink(fp, recursive = T)
 
 RV <- list()
-RV$CurrentSite$SiteName=SiteName
-RV$CurrentSite$Network=Network
+RV$CurrentSiteData$SiteName=SiteName
+RV$CurrentSiteData$Network=Network
 RV$Email <- 'ross.searle@gmail.com'
+
+RV$CurrentSiteData <- ol
 
 session <- list()
 session$token <- '1234567890'

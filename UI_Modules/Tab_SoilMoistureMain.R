@@ -9,6 +9,9 @@
 
 Tab1_UI <- function() {
   
+  mainChartWidth=9
+  mainLegendWidth=3
+  
  ns <- NS('Tab1')
 
     tabPanel("Moisture Probes",  icon = icon("bore-hole", tags$style()),
@@ -41,11 +44,18 @@ Tab1_UI <- function() {
                ),
                mainPanel(
                  
-                 fluidRow(  dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "250px"), HTML(''), 
-                            dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "150px"),
-                            dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px"),
-                            dygraphOutput("wgt_testddd", width = "800px", height = "0px"),
-                 ),
+                 
+                 
+                 
+                 
+                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "180px")), 
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML('Volumetric Soil<BR>Water (mm).')), tags$div(id = "DyTSlegendDivVolId"))  ), 
+                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "180px")), 
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML('Raw Probe<BR>Values.')), tags$div(id = "DyTSlegendDivRawId"))  ), 
+                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px")),
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML(paste0('Rainfall (mm).'))), htmlOutput(outputId='wgtHTMLBomStation', inline = FALSE), tags$div(id = "DyTSlegendDivRainId")) ), 
+                 #fluidRow( column(mainChartWidth,   dygraphOutput("wgt_testddd", width = "800px", height = "0px")),  tags$h4("Chart Legend"), tags$div(id = "legendDivId"))   ),
+                 
                  
                  fluidRow( column(4, plotOutput("wgt_SMmain_volProfile", width = "350px", height = "450px")), 
                            column(3, plotOutput("wgt_SMmain_volProfile_colGradient", width = "300px", height = "450px")),
