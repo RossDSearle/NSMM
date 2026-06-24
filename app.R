@@ -31,7 +31,7 @@ library(stringr)
 library(httr)
 library(jsonlite)
 library(listviewer)
-
+library(lubridate)
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
   APIUrl <<- 'http:'
@@ -101,6 +101,26 @@ ui <- fluidPage(
     ")),
     
     
+    #### side bar
+    tags$style(HTML("
+      #slidePanel {
+        position: fixed;
+        width: 300px;
+        height: 100%;
+        top: 0;
+        left: -300px;
+        background-color: #f8f9fa;
+        padding: 20px;
+        box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+        transition: left 0.4s ease-in-out;
+        z-index: 1050;
+      }
+      #slidePanel.open {
+        left: 0;
+      }
+    ")),
+    
+    
     tags$style(HTML("
         div[id^='DyTSlegendDiv']  {
   margin-bottom: 2px !important; /* Set a very tight bottom margin */
@@ -145,7 +165,7 @@ ui <- fluidPage(
   navbarPage("", id = "mainTabset", 
 
             theme = shinythemes::shinytheme("flatly"),
-             
+            
             Tab1_UI(),
             Tab2_UI(),
          #   Tab4_UI(),
@@ -164,6 +184,7 @@ server <- function(input, output, session) {
   RV$User <- NULL
   RV$Email <- 'ross.searle@gmail.com'
   RV$CurrentSite <- NULL
+  RV$CurrentDate <- Sys.Date()
   RV$ShowReporting <- F
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
@@ -205,19 +226,119 @@ server <- function(input, output, session) {
       } 
     }
     
-    ck <- get_cookie(cookie_name = "NSMMDefaultSite", session = session)
+    readCookie()
+
+  })    
+    
+###  ^ Cookie management ####
+    
+  ###  ^ ^ Write the Settings cookies  ####
+ readCookie <- reactive({
+    ck_network <- get_cookie(cookie_name = "NSMMDefaultNetwork", session = session)
+    ck_site <- get_cookie(cookie_name = "NSMMDefaultSite", session = session)
+    ck_email <- get_cookie(cookie_name = "NSMMDefaultEmail", session = session)
+    ck_tidy <- get_cookie(cookie_name = "NSMMDefaultTidyTS", session = session)
+    
     isolate({
+         if(!is.null(ck_network)){
+           RV$Cookie$Network <- ck_network
+          }else{
+           RV$Cookie$Network <- 'NSMM'
+          }
+      
+          if(!is.null(ck_site)){
+            RV$Cookie$Site <- ck_site
+          }else{
+            RV$Cookie$Site <- 'Thoona'
+          }
+      
+          if(!is.null(ck_email)){
+            RV$Cookie$Email <- ck_email
+          }else{
+            RV$Cookie$Email <- ''
+          }
+        
+          if(!is.null(ck_tidy)){
+            RV$Cookie$TidyTS <- ck_tidy
+          }else{
+            RV$Cookie$TidyTS <- 'true'
+          }
+    })
+})
+  
+  # ###  ^ ^ Save the Site Name cookies  ####
+  # observeEvent(input$wgt_SaveCookie, {
+  #   req(input$wgt_SMmain_SiteName,input$wgt_SMmain_Network)
+  #   isolate( set_cookie(cookie_name = "NSMMDefaultSite", cookie_value = paste0(input$wgt_SMmain_Network,'|',input$wgt_SMmain_SiteName), session = session))
+  #   showNotification(
+  #     paste("Site saved :",  paste0(input$wgt_SMmain_Network,' - ',input$wgt_SMmain_SiteName)), 
+  #     type = "message", 
+  #     duration = 3,
+  #     closeButton = T
+  #   )
+  # })
+  # 
+  
+
+  
+  
+  ###   ^ App Settings  #####
+  # 1. Open the panel when 'Settings' is clicked
+  observeEvent(input$toggleBtn, {
+    
+    print('Readings cookies....')
+    readCookie()
+    
+    shinyjs::addClass("slidePanel", "open")
+    updateSelectInput(session = session, inputId = 'wgt_settings_default_Network', selected=RV$Cookie$Network)
+    new_choices <- as.character(glbSites[glbSites$network==RV$Cookie$Network, ]$sitename)
+    isolate( updateSelectInput(session = session, inputId = 'wgt_settings_default_site', choices=new_choices, selected=as.character(RV$Cookie$Site)))
+    updateTextInput(session = session, inputId = 'wgt_settings_user_email', value=RV$Cookie$Email)
+    updateCheckboxInput(session = session, inputId = 'wgt_settings_tidyTS', value=as.logical(RV$Cookie$TidyTS))
+
+  })
+  
+  observeEvent(input$wgt_settings_default_Network, {
+    new_choices <- as.character(glbSites[glbSites$network==input$wgt_settings_default_Network, ]$sitename)
+    isolate( updateSelectInput(session = session, inputId = 'wgt_settings_default_site', choices=new_choices, selected=as.character(RV$Cookie$Site)))
+  })
+  # 2. Close the panel when 'Save' is clicked
+  
+  
+  observeEvent(input$wgt_settings_cancel, {
+    shinyjs::removeClass("slidePanel", "open")
+  })
+  ###  ^ ^ Save the Site Name cookies  ####
+  
+  observeEvent(input$wgt_settings_save, {
+    shinyjs::removeClass("slidePanel", "open")
+    print('Writing Cookie')
+    isolate({
+      
+      RV$Cookie$Network <- input$wgt_settings_default_Network
+      RV$Cookie$Site <- input$wgt_settings_default_site
+      RV$Cookie$Email <- input$wgt_settings_user_email
+      RV$Cookie$TidyTS <- input$wgt_settings_tidyTS
+    
+      set_cookie(cookie_name = "NSMMDefaultNetwork", cookie_value = paste0(RV$Cookie$Network), session = session)
+      set_cookie(cookie_name = "NSMMDefaultSite", cookie_value = paste0(RV$Cookie$Site), session = session)
+      set_cookie(cookie_name = "NSMMDefaultEmail", cookie_value = paste0(RV$Cookie$Email), session = session)
+      set_cookie(cookie_name = "NSMMDefaultTidyTS", cookie_value = paste0(RV$Cookie$TidyTS), session = session)
+      
+      print(get_cookie(cookie_name = "NSMMDefaultSite"))
+    })
+  })
+  
  
-   if(!is.null(ck)){
-     bits <- stringr::str_split(ck, '[|]')
-     RV$Cookie$Network <- bits[[1]][1]
-     RV$Cookie$Site <- bits[[1]][2]
-   }else{
-     RV$Cookie$Network <- 'NSMM'
-     RV$Cookie$Site <- 'Thoona'
-   }
-  })
-  })
+  
+  # observeEvent(input$wgt_settings_default_Network, {
+  #    new_choices <- glbSites[glbSites$network==input$wgt_settings_default_Network, ]$sitename
+  #    print(new_choices)
+  #    updateSelectInput(session, 'wgt_settings_default_site',
+  #                      choices = as.character(new_choices),
+  #                      selected = new_choices[1])
+  # })
+  
   
   observe({
     req(input$wgt_SMmain_Network)
@@ -235,19 +356,6 @@ server <- function(input, output, session) {
     updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$sitename), selected = site)
   }) 
 
-  ###  ^ Save the Site cookie  ####
-  observeEvent(input$wgt_SaveCookie, {
-  req(input$wgt_SMmain_SiteName,input$wgt_SMmain_Network)
-   isolate( set_cookie(cookie_name = "NSMMDefaultSite", cookie_value = paste0(input$wgt_SMmain_Network,'|',input$wgt_SMmain_SiteName), session = session))
-   showNotification(
-     paste("Site saved :",  paste0(input$wgt_SMmain_Network,' - ',input$wgt_SMmain_SiteName)), 
-     type = "message", 
-     duration = 3,
-     closeButton = T
-        
-      
-   )
-  })
 
   observe({
     if(RV$ShowReporting){
@@ -418,8 +526,8 @@ server <- function(input, output, session) {
         dygraph(mtsV,  ylab =  'Vol', group = 'Main') %>%
           dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
 
-          dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26) %>%
-          dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
+          dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26,drawPoints = TRUE) %>%
+          dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE,drawPoints = TRUE) %>%
           #dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
           
           dyLegend(
@@ -427,11 +535,16 @@ server <- function(input, output, session) {
             labelsSeparateLines = TRUE
           )  %>%
           
+          dyCallbacks(
+            clickCallback = "function(e, x, points) {
+          Shiny.setInputValue('chart_clicked_time', x);
+        }") # %>%
           
-        dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
+       # dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
       #  dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
         
   })
+  
 
 
    output$wgt_SMmain_rawTSChart <- renderDygraph({
@@ -452,7 +565,7 @@ server <- function(input, output, session) {
                                         # , main = 'Raw Probe Values'
          dygraph(smTS,  group = 'Main') %>%
           dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
-           dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+           dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
            dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
            
            dyLegend(
@@ -469,9 +582,6 @@ server <- function(input, output, session) {
    output$wgt_SMmain_rainTSChart <- renderDygraph({
      
      req(RV$CurrentSiteData, input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
-
-     print(RV$CurrentSiteData)
-     
      
      if(!is.null(RV$CurrentSiteData$TS$Rainfall)){
        rainTS <- RV$CurrentSiteData$TS$Rainfall 
@@ -499,9 +609,21 @@ server <- function(input, output, session) {
      tags$div(style="font-weight: bold;font-size: 10px !important;font-weight: bold;  line-height: 1.2;", 
               HTML(paste('<BR>BoM Station : ', RV$CurrentSiteData$BoM_Station_Name, '<BR>Distance from Probe : ', RV$CurrentSiteData$Station_Distance, '<BR><BR>')))
    })
+
    
-   
-   
+####  ^^^ Date Selection ####   
+    output$wgtSelectedDate <- renderUI({
+     if(is.null(input$chart_clicked_time)){
+       dt = 'None'
+     }else{
+       seconds_epoch <- input$chart_clicked_time / 1000
+       posix_time <- as.POSIXct(seconds_epoch, origin = "1970-01-01", tz = "UTC")
+       dt <-  format(posix_time, "%Y-%m-%d")
+       RV$CurrentDate <- dt
+     }
+     tags$div(style="font-weight: bold;font-size: 12px !important;" ,  HTML(paste('<BR>Selected date : ', dt)))
+   })
+  
    
    
    ### ^^ Render bucket plot  ####

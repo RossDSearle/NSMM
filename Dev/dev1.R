@@ -22,6 +22,8 @@ input$wgt_SMmain_Network <- 'NSMM'
 input$wgt_SMmain_SiteName <- 'Thoona'
 input$datePker <- as.Date('2026-06-11')
 
+input$wgt_settings_default_network = 'NSMM'
+
 soilBucketDataSrc='SLGApedo'
 
 calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", Network, "' and SiteName='", SiteName, "'"))

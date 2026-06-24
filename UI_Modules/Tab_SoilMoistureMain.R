@@ -11,11 +11,43 @@ Tab1_UI <- function() {
   
   mainChartWidth=9
   mainLegendWidth=3
+
   
- ns <- NS('Tab1')
+  
+  
+ #ns <- NS('Tab1')
 
     tabPanel("Moisture Probes",  icon = icon("bore-hole", tags$style()),
              HTML('<div style="margin-left: 20px; ">'),
+             
+             
+             actionLink("toggleBtn", "User Settings"),
+             
+             # Sliding Panel for managing persistant settings
+             div(id = "slidePanel",
+                 h4("User Settings"),
+                 hr(),
+                 
+                 br(),
+                 # Default Sensor Site
+                 selectInput("wgt_settings_default_Network", "Default Network :", choices = paste0(glbSites$network)),
+                 selectInput("wgt_settings_default_site", "Default Site :", choices = NULL),
+                 br(),
+                 # Email Input
+                 textInput("wgt_settings_user_email", "Email Address:", placeholder = "name@example.com"),
+                 p(tags$div(style="font-size: 11px;",'Your email address is required by SILO to supply the weather data. 
+                   It is not saved on our systems but rather stored as a cookie on your device. 
+                   If your chose not to supply your email address to SILO you will not have access to weather data in this website.')),
+                 
+                 # Trim And fill TS
+                 br(),
+                 checkboxInput("wgt_settings_tidyTS", "Tidy up timeseries"),
+                 p(tags$div(style="font-size: 11px;",'Trim NA data from the start and end of timeseries data as well as fill missing data (linear interpolation) within a timeseries.')),
+                 br(),
+                 actionButton("wgt_settings_save", "Save", class = "btn-primary"),
+                 actionButton("wgt_settings_cancel", "Cancel", class = "btn-primary")
+             ),
+             
              
              sidebarLayout(
                sidebarPanel( width = 3,
@@ -26,17 +58,12 @@ Tab1_UI <- function() {
                              selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$network[2], width = 350, selected='NSMM'),
                              selectInput("wgt_SMmain_SiteName", "Site", choices=NULL, width = 350),
                              
-                             actionLink('wgt_SaveCookie', 'Save as default site'),
-                             HTML('<BR><BR>'),
+                             # actionLink('wgt_SaveCookie', 'Save as default site'),
+                             # HTML('<BR><BR>'),
                              
                             # helpText("Select date below"), 
-                             sliderInput("datePker", "Dates:", min = as.Date("2025-01-01","%Y-%m-%d"), max = Sys.Date()-5, value=Sys.Date()-5, timeFormat="%Y-%m-%d",
-                                         animate = animationOptions(interval = 300, loop = TRUE)),
-                             
-                           #  helpText("Select map date below"), 
-                          #   sliderInput("wgt_SMmain_datePker", "Dates:", min = as.Date("2017-01-01","%Y-%m-%d"), max = as.Date("2021-09-01","%Y-%m-%d"), value=as.Date("2021-07-01"), timeFormat="%Y-%m-%d",
-                          #               animate = animationOptions(interval = 300, loop = TRUE)),
-                            # sliderInput("tempCor", "Temp Correction:", min = 0, max = 0.5, value=0.3),
+                             # sliderInput("datePker", "Dates:", min = as.Date("2025-01-01","%Y-%m-%d"), max = Sys.Date()-5, value=Sys.Date()-5, timeFormat="%Y-%m-%d",
+                             #             animate = animationOptions(interval = 300, loop = TRUE)),
                             
                              HTML('<BR><BR><BR><BR><BR><BR>')
                              
@@ -49,12 +76,16 @@ Tab1_UI <- function() {
                  
                  
                  fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "180px")), 
-                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML('Volumetric Soil<BR>Water (mm).')), tags$div(id = "DyTSlegendDivVolId"))  ), 
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML('Volumetric Soil<BR>Water (mm).')), 
+                                  tags$div(id = "DyTSlegendDivVolId"))  ), 
                  fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "180px")), 
-                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML('Raw Probe<BR>Values.')), tags$div(id = "DyTSlegendDivRawId"))  ), 
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML('Raw Probe<BR>Values.')), 
+                                  tags$div(id = "DyTSlegendDivRawId"))  ), 
                  fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px")),
-                           column(mainLegendWidth,  tags$div(style="font-weight: bold;", HTML(paste0('Rainfall (mm).'))), htmlOutput(outputId='wgtHTMLBomStation', inline = FALSE), tags$div(id = "DyTSlegendDivRainId")) ), 
-                 #fluidRow( column(mainChartWidth,   dygraphOutput("wgt_testddd", width = "800px", height = "0px")),  tags$h4("Chart Legend"), tags$div(id = "legendDivId"))   ),
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML(paste0('Rainfall (mm).'))), 
+                                  htmlOutput(outputId='wgtHTMLBomStation', inline = FALSE), 
+                                  tags$div(id = "DyTSlegendDivRainId")) ), 
+                 fluidRow( column(12,  htmlOutput(outputId='wgtSelectedDate', inline = FALSE) )),
                  
                  
                  fluidRow( column(4, plotOutput("wgt_SMmain_volProfile", width = "350px", height = "450px")), 

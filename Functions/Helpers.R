@@ -16,7 +16,7 @@ queryAPI <- function(EP){
 }
 
 
-getTimeSeries <- function(df, filter=NULL, fill.breaks=T){
+getTimeSeries <- function(df, filter=NULL, fill.breaks=T, do.trim=T){
   
   colIdxs <- which(str_starts(colnames(df), filter))
   
@@ -27,9 +27,11 @@ getTimeSeries <- function(df, filter=NULL, fill.breaks=T){
       ts <- xts::xts(tdf[, -1], order.by = tdf$Date)
       names(ts) <- nms[colIdxs]
       
+      if(do.trim){
+        ts <- zoo::na.trim(ts)
+      }
       if(fill.breaks){
-        ts <- na.trim(ts)
-        ts <- na.approx(ts)
+        ts <- zoo::na.approx(ts)
       }
       
       return(ts)
@@ -42,7 +44,7 @@ getTimeSeries <- function(df, filter=NULL, fill.breaks=T){
 
 
 
-getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T){
+getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T, fill.breaks=T, do.trim=T){
   
   ol <- list()
   ol$QueryDate <- Sys.Date()
@@ -59,13 +61,12 @@ getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NU
   ol$DF$Silo <- silo$Data
   
   if(makeTS){
-    ol$TS$volumetric_mm <- getTimeSeries(df = ol$DF$SiteSensorData, filter = 'Avail-mm-Soil-Moisture')
-    ol$TS$rawProbe <- getTimeSeries(ol$DF$SiteSensorData, filter = 'Soil-Moisture')
+    ol$TS$volumetric_mm <- getTimeSeries(df = ol$DF$SiteSensorData, filter = 'Avail-mm-Soil-Moisture', fill.breaks, do.trim)
+    ol$TS$rawProbe <- getTimeSeries(ol$DF$SiteSensorData, filter = 'Soil-Moisture', fill.breaks=T, do.trim=T)
     
     ol$TS$Rainfall <- getTimeSeries(df=ol$DF$Silo, filter='daily_rain')
   }
   
-  print(str(ol,max.level = 1))
   return(ol)
 }
 
@@ -86,7 +87,7 @@ getGlobalData <- function(){
   
 }
 
-getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL){
+getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL, fill.breaks=T, do.trim=T){
   # what options are silo, volumetric, globals
   
   if(is.null(user)){
