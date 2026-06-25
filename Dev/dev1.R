@@ -2,7 +2,8 @@ library(listviewer)
 
 Network='NSMM'
 SiteName='Thoona'
-SiteName='B Farmers'
+SiteName='Bishes'
+Email='chris.mitchell@hotmail.com'
 
 #fp <- file.path(tempdir(), paste0('NSMMDataCache'))
 #unlink(fp, recursive = T)
@@ -11,6 +12,7 @@ RV <- list()
 RV$CurrentSiteData$SiteName=SiteName
 RV$CurrentSiteData$Network=Network
 RV$Email <- 'ross.searle@gmail.com'
+RV$CurrentDate <- as.Date('2026-04-01')
 
 RV$CurrentSiteData <- ol
 

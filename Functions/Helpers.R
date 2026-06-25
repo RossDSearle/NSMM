@@ -11,12 +11,12 @@ queryAPI <- function(EP){
     df <- fromJSON(jsn)
     return(df)
   }else{
-    stop(paste0('There was a problem with the API query - ', qry))
+    return(paste0('Error : There was a problem with the API query - ', qry))
   }
 }
 
 
-getTimeSeries <- function(df, filter=NULL, fill.breaks=T, do.trim=T){
+getTimeSeries <- function(df, filter=NULL, fill.gaps=T, do.trim=T){
   
   colIdxs <- which(str_starts(colnames(df), filter))
   
@@ -30,7 +30,7 @@ getTimeSeries <- function(df, filter=NULL, fill.breaks=T, do.trim=T){
       if(do.trim){
         ts <- zoo::na.trim(ts)
       }
-      if(fill.breaks){
+      if(fill.gaps){
         ts <- zoo::na.approx(ts)
       }
       
@@ -44,27 +44,40 @@ getTimeSeries <- function(df, filter=NULL, fill.breaks=T, do.trim=T){
 
 
 
-getAllSiteData <- function(user_temp_dir, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T, fill.breaks=T, do.trim=T){
+getAllSiteData <- function(user_temp_dir=NULL, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T, fill.gaps=T, do.trim=T){
   
   ol <- list()
   ol$QueryDate <- Sys.Date()
   ol$Network <- Network
   ol$SiteName <- SiteName 
   
+  if(!is.null(Email)){
+    silo <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='silo', Email = Email)
+    
+    if(!is.null(silo)){
+      ol$BoM_Station_Number <- silo$Station_Number
+      ol$BoM_Station_Name <- silo$Station_Name
+      ol$Station_Distance <- silo$Distance
+      ol$DF$Silo <- silo$Data
+    }
+  }
   
-  silo <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='silo', Email = Email)
-  ol$BoM_Station_Number <- silo$Station_Number
-  ol$BoM_Station_Name <- silo$Station_Name
-  ol$Station_Distance <- silo$Distance
-  
-  ol$DF$SiteSensorData <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='volumetric')
-  ol$DF$Silo <- silo$Data
+   
+  sensD <-  getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='volumetric')     
+  if(!is.null(sensD)){
+        ol$DF$SiteSensorData <- sensD
+  }    
+    
   
   if(makeTS){
-    ol$TS$volumetric_mm <- getTimeSeries(df = ol$DF$SiteSensorData, filter = 'Avail-mm-Soil-Moisture', fill.breaks, do.trim)
-    ol$TS$rawProbe <- getTimeSeries(ol$DF$SiteSensorData, filter = 'Soil-Moisture', fill.breaks=T, do.trim=T)
-    
-    ol$TS$Rainfall <- getTimeSeries(df=ol$DF$Silo, filter='daily_rain')
+    if(!is.null(ol$DF$SiteSensorData)){
+      ol$TS$volumetric_mmPermm <- getTimeSeries(df = ol$DF$SiteSensorData, filter = 'Avail-mm_per_mm-Soil-Moisture', fill.gaps, do.trim)
+      ol$TS$volumetric_mm <- getTimeSeries(df = ol$DF$SiteSensorData, filter = 'Avail-mm-Soil-Moisture', fill.gaps, do.trim)
+      ol$TS$rawProbe <- getTimeSeries(ol$DF$SiteSensorData, filter = 'Soil-Moisture', fill.gaps=T, do.trim=T)
+    }
+    if(!is.null(ol$DF$Silo)){
+      ol$TS$Rainfall <- getTimeSeries(df=ol$DF$Silo, filter='daily_rain')
+    }
   }
   
   return(ol)
@@ -87,9 +100,10 @@ getGlobalData <- function(){
   
 }
 
-getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL, fill.breaks=T, do.trim=T){
+getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL, fill.gaps=T, do.trim=T){
   # what options are silo, volumetric, globals
   
+ # grab data from the daily cache if it exists
   if(is.null(user)){
     datacache <- paste0(tempdir(), '/NSMMDataCache')
     CacheDir <- paste0(datacache, '/', what)
@@ -97,18 +111,10 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
     cachefile <- paste0(CacheDir, '/',  Sys.Date(), '_', Network, '_', SiteName, '_', what, '_Data.rds')
     
     fls <- list.files(CacheDir, full.names = T,recursive = F)
-        # if(length(fls)>0){
-        #   idxs <- which(!fls %in% cachefile)
-        #   if(length(idxs)>0){
-        #     unlink(fls)
-        #   }
-        # }
     idxs <- which(!stringr::str_starts(basename(fls), as.character(Sys.Date())))
     if(length(idxs) > 0){
       unlink(fls[idxs])
     }
-      
-    
   }else{
     datacache <- user
     CacheDir <- paste0(datacache, '/', what)
@@ -127,11 +133,18 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
     if(what=='silo'){
       url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM')
       data <- queryAPI(EP = url )
+      if(class(data)!='data.frame'){
+        return(NULL)
+      }
       data$Data$date <- as.Date(data$Data$date )
       colnames(data$Data)[1] <- 'Date'
     }else if(what=='volumetric'){
       url <-paste0('VolumetricSoilWater?network=', Network,'&sitename=',SiteName ,'&verbose=true')
       data <- queryAPI(EP = url )
+      if(class(data)!='data.frame'){
+        return(NULL)
+      }
+      
       data$Date <- as.Date(data$Date )
     }else if(what=='globals'){
       data <- getGlobalData()
@@ -159,5 +172,36 @@ splineVals <- function(indf, atts){
   return(ol)
 }
 
+
+makeDepthIntervals <- function(calibs){
+  
+  odf <- calibs
+  
+  odf$IntervalUpper <- NA
+  odf$IntervalLower <- NA
+  
+  for (i in 1:nrow(odf)) {
+    rec <- odf[i,]
+    
+    if(i==1){
+      up=0
+    }else{
+      up=rec$upperdepth
+    }
+    
+    if(i==nrow(odf)){
+      low=rec$lowerdepth
+    }else{
+      
+      low=odf[i+1,]$upperdepth
+    }
+    
+    odf[i,]$IntervalUpper <- up
+    odf[i,]$IntervalLower <- low
+    
+  }
+  
+  return(odf)
+} 
 
 

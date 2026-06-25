@@ -523,12 +523,13 @@ server <- function(input, output, session) {
         lowdepth <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName, ]$lowerdepth/10
         names(mtsV) <- paste0(updepth, " to ", lowdepth, ' cm ')
                                                       # , main = 'Total Volumetric Water'
-        dygraph(mtsV,  ylab =  'Vol', group = 'Main') %>%
-          dyAxis("y", label ='Volumetric Moisture (mm),', 'Volumetric Moisture', valueRange = c(0, maxVal)) %>%
+        dygraph(mtsV, , group = 'Main') %>%
+          dyAxis("y",  valueRange = c(0, maxVal)) %>%
 
           dyOptions(axisLineWidth = 1.5, fillGraph = F, drawGrid = T, titleHeight = 26,drawPoints = TRUE) %>%
           dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE,drawPoints = TRUE) %>%
           #dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
+          dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
           
           dyLegend(
             labelsDiv = "DyTSlegendDivVolId",
@@ -538,7 +539,7 @@ server <- function(input, output, session) {
           dyCallbacks(
             clickCallback = "function(e, x, points) {
           Shiny.setInputValue('chart_clicked_time', x);
-        }") # %>%
+          }")
           
        # dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid")
       #  dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
@@ -564,14 +565,19 @@ server <- function(input, output, session) {
         
                                         # , main = 'Raw Probe Values'
          dygraph(smTS,  group = 'Main') %>%
-          dyAxis("y", label ='Raw Values', valueRange = c(0, maxVal)) %>%
-           dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+          dyAxis("y",  valueRange = c(0, maxVal)) %>%
+          # dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
            dyOptions(colors = RColorBrewer::brewer.pal(11, "Paired"), stackedGraph=T, retainDateWindow = TRUE) %>%
+           dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
            
            dyLegend(
              labelsDiv = "DyTSlegendDivRawId",
              labelsSeparateLines = TRUE
-           )
+           ) %>% 
+         dyCallbacks(
+           clickCallback = "function(e, x, points) {
+          Shiny.setInputValue('chart_clicked_time', x);
+          }")
  
 
      # dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)
@@ -593,13 +599,21 @@ server <- function(input, output, session) {
        dygraph(rainTS,  group = 'Main' ) %>%
          dyBarChart() %>% 
        #  dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
-         dyAxis("y", label ='Rainfall (mm)', valueRange = c(0, maxVal)) %>%
-         dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>% 
+         dyAxis("y",  valueRange = c(0, maxVal)) %>%
+         #dyEvent( as.Date(input$datePker), label = as.Date(input$datePker), labelLoc = c("top"), color = "black", strokePattern = "solid") %>% 
+         
+         dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
+         
          dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)  %>% 
        dyLegend(
          labelsDiv = "DyTSlegendDivRainId",
          labelsSeparateLines = TRUE
-       )  
+       )   %>% 
+       
+       dyCallbacks(
+         clickCallback = "function(e, x, points) {
+          Shiny.setInputValue('chart_clicked_time', x);
+          }")
      }
    })
    
@@ -611,7 +625,7 @@ server <- function(input, output, session) {
    })
 
    
-####  ^^^ Date Selection ####   
+####  ^^^ Date Selection ####
     output$wgtSelectedDate <- renderUI({
      if(is.null(input$chart_clicked_time)){
        dt = 'None'
@@ -621,25 +635,22 @@ server <- function(input, output, session) {
        dt <-  format(posix_time, "%Y-%m-%d")
        RV$CurrentDate <- dt
      }
-     tags$div(style="font-weight: bold;font-size: 12px !important;" ,  HTML(paste('<BR>Selected date : ', dt)))
+     tags$div(style="font-weight: 700;font-size: 16px;
+              display: grid; place-content: center; height: 50px; color: #140A5E;" ,  HTML(paste('Selected date : ', dt)))
    })
-  
-   
+
+
    
    ### ^^ Render bucket plot  ####
     output$wgt_SMmain_volProfile <- renderPlot({
   
-     req(  RV$CurrentSiteData$TS$volumetric_mm, input$datePker)
-
-      calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-      dt <- input$datePker
-      day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-
-      if(all(is.na(day))){
-        plotNoDataMessage('darkgreen')
-      }else{
-        plotPAWProfile(ts = day, calibs)
-      }
+      req(  RV$CurrentSiteData$TS$volumetric_mmPermm, RV$CurrentDate)
+      
+       calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
+       date <- RV$CurrentDate
+       
+       ts <- RV$CurrentSiteData$TS$volumetric_mmPermm 
+       plotPAWProfile2(ts, calibs, date, title)
     })
    
    
@@ -647,48 +658,42 @@ server <- function(input, output, session) {
    ### ^^ Render bucket colour gradient plot  ####
    output$wgt_SMmain_volProfile_colGradient <- renderPlot({
      
-     req( RV$CurrentSiteData$TS$volumetric_mm)
-     # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
-     # calibs <- queryAPI(EP = url )
-     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-     
-     dt <- as.Date(input$datePker)
-     day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-
-     if(all(is.na(day))){
-       plotNoDataMessage('darkgreen')
-     }
-     else{
-       plotPAWProfileGradientColours(ts = day, calibs)
-     }
-    
-     # validate(
-     #   need(!is.na(day[1]), "No data available: Value is NA")
-     # )
-     
-     
+     # req( RV$CurrentSiteData$TS$volumetric_mm)
+     # # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
+     # # calibs <- queryAPI(EP = url )
+     # calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
+     # 
+     # dt <- RV$CurrentDate
+     # day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
+     # 
+     # if(all(is.na(day))){
+     #   plotNoDataMessage('darkgreen')
+     # }
+     # else{
+     #   plotPAWProfileGradientColours(ts = day, calibs)
+     # }
    })
    
    
    ### ^^ Render Gauge  ####
    output$wgt_SMmain_guage <- renderC3({
      
-   #   req( req(  RV$CurrentSiteData$TS$volumetric_mm))
-   #   calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-   # 
-   #  bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$intervallower-calibs$intervalupper)))
-   # 
-   #  dt <- as.Date(input$datePker)
-   #  smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-   # 
-   #  print(tail(smvals, 10))
-   #  sdf <- data.frame(upperD=calibs$intervalupper, lowerD=calibs$intervallower, vals=as.numeric(as.character(smvals))/100)
-   # 
-   # totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
-   # percWat <- (totwat/bucketSize) * 100
-   # 
-   #   data.frame('Available Moisture'=percWat) %>%
-   #     c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
+    #   req( req(  RV$CurrentSiteData$TS$volumetric_mm))
+    #   calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
+    # print(head(calibs))
+    # 
+    # calibs <- makeDepthIntervals(calibs)
+    #   bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+    #   
+    #   dt <- as.Date(RV$CurrentDate)
+    #   smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
+    #   sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
+    # 
+    # totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
+    # percWat <- (totwat/bucketSize) * 100
+    #  
+    # data.frame('Available Moisture'=percWat) %>%
+    # c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
 
    })
    

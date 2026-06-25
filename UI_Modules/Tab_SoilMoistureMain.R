@@ -74,18 +74,20 @@ Tab1_UI <- function() {
                  
                  
                  
-                 
+                 fluidRow( column(12, 'Click on the charts below to select a date to display daily soil moisture diagram for')),
                  fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "180px")), 
-                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML('Volumetric Soil<BR>Water (mm).')), 
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px; display: flex; justify-content: flex-start;", HTML('Volumetric Soil<BR>Water (mm).')), 
                                   tags$div(id = "DyTSlegendDivVolId"))  ), 
                  fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "180px")), 
                            column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML('Raw Probe<BR>Values.')), 
                                   tags$div(id = "DyTSlegendDivRawId"))  ), 
-                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px")),
-                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML(paste0('Rainfall (mm).'))), 
+                 fluidRow( column(mainChartWidth,  style = "text-align: right;",   dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px")),
+                           column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px; align: left", HTML(paste0('Rainfall (mm).'))), 
                                   htmlOutput(outputId='wgtHTMLBomStation', inline = FALSE), 
                                   tags$div(id = "DyTSlegendDivRainId")) ), 
-                 fluidRow( column(12,  htmlOutput(outputId='wgtSelectedDate', inline = FALSE) )),
+                 
+                 fluidRow( column(mainChartWidth, htmlOutput(outputId='wgtSelectedDate', inline = F))),
+                 
                  
                  
                  fluidRow( column(4, plotOutput("wgt_SMmain_volProfile", width = "350px", height = "450px")), 

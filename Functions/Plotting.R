@@ -9,13 +9,60 @@ plotNoDataMessage <- function(textColour='red'){
         axes = FALSE
   )
   text(x = 0.1, y = 0.9, labels = "No data available", col = textColour, cex = 1.8, font = 2, adj = 0)
-  text(x = 0.1, y = 0.8, labels = "for this date", col = textColour, cex = 1.8, font = 2, adj = 0)
+  text(x = 0.3, y = 0.8, labels = "for this date", col = textColour, cex = 1.8, font = 2, adj = 0)
+  
+  recorded_plot <- recordPlot()
+  return(recorded_plot)
 }
 
 
 
 
+
+plotPAWProfile2 <- function(ts, calibs, date, title, bktSize=null){
+  
+  day <- ts[date]
+
+  if(all(is.na(day))){
+    plotNoDataMessage('darkgreen')
+  }else{
+  
+  calibs[1,]$upperdepth <- 0
+  
+  sbx <- c(calibs$lowerlimit, rev(calibs$drainedupperlimit))
+  sby <- c(calibs$upperdepth/10, rev(calibs$upperdepth/10))
+  water <- c(calibs$lowerlimit, (rev(day) * 100))
+  
+  plot( 0, type="n", main=paste(''), 
+        xlab='Volumeteric Soil Moisture(mm/mm)', ylab='Soil Depth (cm)',
+        yaxs = "i", xaxs = "i", xlim = c((min(calibs$lowerlimit))-2, (max(calibs$drainedupperlimit)) + 2), ylim = rev(range(c(0,calibs$upperdepth/10))),
+
+        cex.lab = 1.2
+  )
+  
+  polygon(sbx,sby,
+          col=c("navajowhite3"),
+          border=c("navajowhite3"),
+          lwd=1, lty=c("solid"))
+  
+  polygon(water,sby,
+          col=c("lightskyblue"),
+          border=c("lightskyblue"),
+          lwd=1, lty=c("solid"))
+  
+  }
+  
+  # recorded_plot <- recordPlot()
+  # return(recorded_plot)
+}
+
+
+
+
+
+
 plotPAWProfile <- function(ts, calibs, title, bktSize=null){
+  
   calibs[1,]$upperdepth <- 0
   
   sbx <- c(calibs$lowerlimit, rev(calibs$drainedupperlimit))
