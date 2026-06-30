@@ -182,7 +182,7 @@ server <- function(input, output, session) {
 ####   Instantiate Reactive Valuse  ######  
   RV <- reactiveValues()
   RV$User <- NULL
-  RV$Email <- 'ross.searle@gmail.com'
+  RV$Email <- NULL
   RV$CurrentSite <- NULL
   RV$CurrentDate <- Sys.Date()
   RV$ShowReporting <- F
@@ -465,7 +465,7 @@ server <- function(input, output, session) {
     req(input$wgt_SMmain_Network, input$wgt_SMmain_SiteName)
    # isolate({
       if(dev){user_temp_dir=NULL}
-    
+    #browser()
     
     tryCatch({
       sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email=RV$Email, makeTS = T)
@@ -639,62 +639,22 @@ server <- function(input, output, session) {
               display: grid; place-content: center; height: 50px; color: #140A5E;" ,  HTML(paste('Selected date : ', dt)))
    })
 
-
-   
    ### ^^ Render bucket plot  ####
     output$wgt_SMmain_volProfile <- renderPlot({
-  
       req(  RV$CurrentSiteData$TS$volumetric_mmPermm, RV$CurrentDate)
-      
-       calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-       date <- RV$CurrentDate
-       
-       ts <- RV$CurrentSiteData$TS$volumetric_mmPermm 
-       plotPAWProfile2(ts, calibs, date, title)
+       plotPAWProfile2(sitedata = RV$CurrentSiteData, date = RV$CurrentDate)
     })
-   
-   
    
    ### ^^ Render bucket colour gradient plot  ####
    output$wgt_SMmain_volProfile_colGradient <- renderPlot({
-     
-     # req( RV$CurrentSiteData$TS$volumetric_mm)
-     # # url <-paste0('BucketInfo?network=', RV$CurrentSiteData$Network,'&sitename=', RV$CurrentSiteData$SiteName)
-     # # calibs <- queryAPI(EP = url )
-     # calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-     # 
-     # dt <- RV$CurrentDate
-     # day <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-     # 
-     # if(all(is.na(day))){
-     #   plotNoDataMessage('darkgreen')
-     # }
-     # else{
-     #   plotPAWProfileGradientColours(ts = day, calibs)
-     # }
+      req(  RV$CurrentSiteData$TS$volumetric_mmPermm)
+        plotPAWProfileGradientColours2(sitedata = RV$CurrentSiteData, date = RV$CurrentDate, alwaysImage = T)
    })
-   
    
    ### ^^ Render Gauge  ####
    output$wgt_SMmain_guage <- renderC3({
-     
-    #   req( req(  RV$CurrentSiteData$TS$volumetric_mm))
-    #   calibs <- glbCalibrationInfo[glbCalibrationInfo$network==RV$CurrentSiteData$Network & glbCalibrationInfo$sitename==RV$CurrentSiteData$SiteName,]
-    # print(head(calibs))
-    # 
-    # calibs <- makeDepthIntervals(calibs)
-    #   bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
-    #   
-    #   dt <- as.Date(RV$CurrentDate)
-    #   smvals <- RV$CurrentSiteData$TS$volumetric_mm[dt]
-    #   sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
-    # 
-    # totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
-    # percWat <- (totwat/bucketSize) * 100
-    #  
-    # data.frame('Available Moisture'=percWat) %>%
-    # c3() %>% c3_gauge(title = 'Colors', label = 'Available Moisture', pattern = c('brown', '#f5e1c1', '#84d3f5', "#042d5e"))
-
+       req( RV$CurrentSiteData$TS$volumetric_mmPermm)
+      plotGauge2(sitedata = RV$CurrentSiteData, date = RV$CurrentDate, alwaysImage = T)
    })
    
    
