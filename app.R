@@ -915,24 +915,31 @@ server <- function(input, output, session) {
      
      smDayVals <- as.numeric(t(sitedata$TS$volumetric_mmPermm[date]))
      
-     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==network & glbCalibrationInfo$sitename==sitename,]
-     calibs[1,]$upperdepth <- 0
-     calibs <- makeDepthIntervals(calibs)
-     bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+     if(all(is.na(smDayVals))){
+      
+         return('')
+       
+       
+     }else{
      
-     sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower,LL=calibs$lowerlimit*0.01, DUL=calibs$drainedupperlimit*0.01, availWater=smDayVals)
-     
-     totwat <- sum((sdf$lowerD-sdf$upperD) * (sdf$availWater-sdf$LL))
-     percWat <- (totwat/bucketSize) * 100
-     
-     HTML(  paste0("<p style='color:green; font-weight: bold;'><br><br>Total Bucket Size = ", round(bucketSize), " mm",
-                   "<br>Available Soil Water = ", round(totwat), " mm",
-                   "<br>Total Rain = ", '0', " mm",
-                   "<br>&nbsp;In Season Rain = ", '0', " mm",
-                   "</p>"
-     )
-     )
-     
+         calibs <- glbCalibrationInfo[glbCalibrationInfo$network==network & glbCalibrationInfo$sitename==sitename,]
+         calibs[1,]$upperdepth <- 0
+         calibs <- makeDepthIntervals(calibs)
+         bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+         
+         sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower,LL=calibs$lowerlimit*0.01, DUL=calibs$drainedupperlimit*0.01, availWater=smDayVals)
+         
+         totwat <- sum((sdf$lowerD-sdf$upperD) * (sdf$availWater-sdf$LL))
+         percWat <- (totwat/bucketSize) * 100
+         
+         HTML(  paste0("<p style='color:green; font-weight: bold;'><br><br>Total Bucket Size = ", round(bucketSize), " mm",
+                       "<br>Available Soil Water = ", round(totwat), " mm",
+                       "<br>Total Rain = ", '0', " mm",
+                       "<br>&nbsp;In Season Rain = ", '0', " mm",
+                       "</p>"
+         )
+         )
+     }
    })
    
   
