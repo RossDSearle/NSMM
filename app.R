@@ -239,54 +239,37 @@ server <- function(input, output, session) {
       cnt=1
       for (i in 1:rows) {
         html <- paste0(html, '<tr>')
-        print(i)
         
         for (j in 1:cols) {
-          print(j)
           
           if(cnt<=length(photos)){
             f <- photos[cnt]
             
-            # outfile <- paste0(td, '/', basename(rec$photo_filename))
-            # 
-            # binData <- rec$thumbnail_data
-            # 
-            # content<-unlist(binData)
-            # writeBin(content, con = outfile)
-            # 
-            # if(stringr::str_to_upper(tools::file_ext(rec$photo_filename))=='JPG'){
-            #   img <- jpeg::readJPEG(outfile)
-            # }else{
-            #   img <- readPNG(outfile)
-            # }
-            # 
-            
             b64img <-  base64enc::base64encode(f)
-            #b64img <- readLines(f)
             
             ext <- tools::file_ext(f)
-            if(ext=='jpg'){
-              img <- jpeg::readJPEG(f)
-              d <- dim(img)
-            } else if(ext=='png'){
-              img <- png::readPNG(f)
-              d <- dim(img)
-            }else{}
+            # if(ext=='jpg'){
+               img <- jpeg::readJPEG(f)
+               d <- dim(img)
+            # } else if(ext=='png'){
+              # img <- png::readPNG(f)
+              # d <- dim(img)
+           # }else{}
             
             m <- max(d[1], d[2])
             prop <- imgSize/m
             w = ceiling(d[2] * prop )
             h = ceiling(d[1] * prop )
             
-            #unlink(outfile)
+            n <- stringr::str_split(basename(f), pattern = '[.]')[[1]][1]
+            n <- stringr::str_replace(n, 'Thumbnail_', '')
+            imgName <- paste0(n)
             
-            #imgData <- paste0('<a class="example-image-link" href="data:image/png;base64,', b64img, '",  data-lightbox="example-1"><img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", width=', w, ', height=', h, '/></a><p><a href="data:image/png;base64,', b64img, '" download="', paste0( rec$agency_code, "_", rec$proj_code, "_", rec$s_id, "_",  rec$photo_alt_text, ".", ext), '"><b>', rec$photo_alt_text,'</b></a></p>' )
-            #imgData <- paste0('<img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", width=', w, ', height=', h, '/><p><b>', rec$photo_alt_text,'</b></a></p>' )
-            
-            imgData <- paste0('<img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", 
+           
+            imgData <- paste0('<img class="example-image" style="border: 15px solid white;"  src="data:image/png;base64,', b64img, '" alt="image-1", 
                               width=', w, ', height=', h, ' style="cursor: pointer;" 
                               onclick="Shiny.setInputValue(&quot;image_clicked&quot;, &quot;', basename(f) , '&quot;, {priority: &quot;event&quot;})" /><p>
-                              <b>', '</b></a></p>' )
+                              <b>',imgName, '</b></a></p>' )
             
             
             cd <- paste0( '<td>', imgData, '</td>')
@@ -318,45 +301,26 @@ server <- function(input, output, session) {
     
     showPageSpinner(caption = 'Retrieving photo from the database .....') 
     
-    # if(RV$ConfigName=='NSMP'){
-    #   con <- OS$DB$Config$getCon(OS$DB$Config$DBNames$NatSoilRO)$Connection
-    # }else{
-    #   con <- OS$DB$Config$getCon(OS$DB$Config$DBNames$NatSoilProjects)$Connection
-    # }
-    # 
-    # rec <- OS$DB$Helpers$doQuery(con=con, paste0("SELECT * FROM dbo.PHOTOS where dbo.PHOTOS.photo_filename = '", input$image_clicked ,"'"))
-    # 
-    # td <- tempdir()
-    # 
-    # outfile2 <- paste0(td, '/', basename(rec$photo_filename))
-    # binData <- rec$photo_img
-    
-    # content<-unlist(binData)
-    # writeBin(content, con = outfile2)
-    
     network <- RV$CurrentSiteData$Network[1]
     sitename <- RV$CurrentSiteData$SiteName[1]
     
     bimg <- paste0(PhotoRoot, '/', network, '/', sitename, '/', input$image_clicked)
-    print(bimg)
+    bimg <- str_replace(bimg, 'Thumbnail_', '')
+    n <- stringr::str_split(input$image_clicked, pattern = '[.]')[[1]][1]
+    imgName <- paste0(network, ' - ', sitename, ' - ', n)
     
     b64img <-  base64enc::base64encode(bimg)
     ext <- tools::file_ext(input$image_clicked)
     
     
-    #srcstring <- paste0('<img class="big-image" src="data:image/jpg;base64,', b64img, '"/>')
     imgData <- paste0('<img class="big-image" src="data:image/', 'jpg', ';base64,', b64img, '" alt="fullRes-image", width="', largePhotoWidth-30, '"/>
                       <p><a href="data:image/','jpg',';base64,', b64img, '" download="', paste0( network, "_", network, "_", input$image_clicked), 
                       '"><b>Download Image</b></a></p>
                       
                       ' )
-    #unlink(outfile2)
-    
-    
-    #print(imgData)
-    
+
     showModal(modalDialog(
-      title = paste0("Bob's photo"),
+      title = paste0(imgName),
       HTML(imgData),
       size = 'xl',
       easyClose = F
@@ -867,9 +831,12 @@ server <- function(input, output, session) {
        rainTS <- RV$CurrentSiteData$TS$Rainfall 
        #maxVal <- max(rainTS, na.rm = T)
        maxVal <- rainChartMaxYVal
+       dayCnt <- nrow(rainTS)
        
        names(rainTS) <- 'Daily Total'
-                                       #, main = 'Rainfall'
+       
+       defaultRange <- c(Sys.Date() - dayCnt, Sys.Date())
+                                  
        dygraph(rainTS,  group = 'Main' ) %>%
          dyBarChart() %>% 
        #  dyLegend(show = "follow", width = 250, showZeroValues = TRUE, labelsDiv = NULL, labelsSeparateLines = FALSE, hideOnMouseOut = TRUE) %>%
@@ -878,7 +845,11 @@ server <- function(input, output, session) {
          
          dyEvent( as.Date(RV$CurrentDate), label = as.Date(RV$CurrentDate), labelLoc = c("top"), color = "black", strokePattern = "solid") %>%
          
-         dyRangeSelector(dateWindow = c(Sys.Date()-20, Sys.Date()), height = 20)  %>% 
+         #dyRangeSelector(dateWindow = c(Sys.Date()-dayCnt, Sys.Date()), height = 20) %>% 
+         dyRangeSelector(dateWindow = defaultRange, height = 20) %>% 
+         
+         dyOptions(retainDateWindow = TRUE) %>%
+         
        dyLegend(
          labelsDiv = "DyTSlegendDivRainId",
          labelsSeparateLines = TRUE
@@ -931,22 +902,29 @@ server <- function(input, output, session) {
       plotGauge2(sitedata = RV$CurrentSiteData, date = RV$CurrentDate, alwaysImage = T)
    })
    
-   
+
    output$vtext <- renderText({
      
-     req( req( RV$CurrentSiteSMTimeSeries$volSM))
-     calibs <- BE$Shared$Queries$doSelectQuery(paste0("select * from probeCalibration where Network='", RV$CurrentSite$Network, "' and SiteName='", RV$CurrentSite$SiteName, "'"))
+     req( req( RV$CurrentSiteData$TS$volumetric_mmPermm))
+     
+     sitedata <- RV$CurrentSiteData
+     date <- RV$CurrentDate
+     
+     network <- sitedata$Network
+     sitename = sitedata$SiteName
+     
+     smDayVals <- as.numeric(t(sitedata$TS$volumetric_mmPermm[date]))
+     
+     calibs <- glbCalibrationInfo[glbCalibrationInfo$network==network & glbCalibrationInfo$sitename==sitename,]
+     calibs[1,]$upperdepth <- 0
      calibs <- makeDepthIntervals(calibs)
+     bucketSize =  as.integer(sum( (calibs$drainedupperlimit - calibs$lowerlimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
      
-     bucketSize =  as.integer(sum( (calibs$DrainedUpperLimit - calibs$LowerLimit)/100 * (calibs$IntervalLower-calibs$IntervalUpper)))
+     sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower,LL=calibs$lowerlimit*0.01, DUL=calibs$drainedupperlimit*0.01, availWater=smDayVals)
      
-     dt <- as.Date(input$datePker)
-     smvals <- RV$CurrentSiteSMTimeSeries$volSM[dt]
-     # smvals <- tail(RV$CurrentSiteSMTimeSeries$volSM, 1)
-     sdf <- data.frame(upperD=calibs$IntervalUpper, lowerD=calibs$IntervalLower, vals=as.numeric(as.character(smvals))/100)
-     
-     totwat <- sum((sdf$lowerD-sdf$upperD) * sdf$vals)
+     totwat <- sum((sdf$lowerD-sdf$upperD) * (sdf$availWater-sdf$LL))
      percWat <- (totwat/bucketSize) * 100
+     
      HTML(  paste0("<p style='color:green; font-weight: bold;'><br><br>Total Bucket Size = ", round(bucketSize), " mm",
                    "<br>Available Soil Water = ", round(totwat), " mm",
                    "<br>Total Rain = ", '0', " mm",

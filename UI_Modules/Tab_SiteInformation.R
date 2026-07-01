@@ -18,7 +18,7 @@ Tab2_UI <- function() {
            fluidRow(
              
              column(2,
-                    actionButton('wgtGETDATA', 'Natsoil'),
+                    actionButton('wgtGETDATA', 'Get Soil Data'),
                     plotOutput('wgtProfile')
                     
              ),
