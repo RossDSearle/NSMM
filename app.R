@@ -32,6 +32,10 @@ library(httr)
 library(jsonlite)
 library(listviewer)
 library(lubridate)
+library(xml2)
+library(munsell)
+library(shinycssloaders)
+
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
   APIUrl <<- 'http:'
@@ -56,6 +60,16 @@ source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
 source('Functions/Plotting.R')
+source('Functions/NatSoilFunctions.R')
+
+codes <<- read.csv('Resources/codes.csv')
+projects <<- read.csv('Resources/projects.csv')
+agencies <<- read.csv('Resources/agencies.csv')
+labMethods <<- read.csv('Resources/labMethods.csv')
+
+largePhotoWidth = 650
+
+PhotoRoot <- 'C:/Projects/NSMM/Photos/AppPhotoLibrary'
 
 ### Get data from the API
 
@@ -193,6 +207,265 @@ server <- function(input, output, session) {
   RV$CurrentSitePhotos = NULL
   RV$CurrentSiteData = NULL
   RV$Cookie <- NULL
+  
+
+  ###.####
+  #### ***** Photos ***** #####
+  #### ^ Render Photo #######
+  
+  
+  output$wgtPhotoViewer <- renderUI({
+    
+    req(RV$CurrentSiteData)
+    network <- RV$CurrentSiteData$Network[1] 
+    sitename <- RV$CurrentSiteData$SiteName[1] 
+    
+    photos <- list.files(paste0(PhotoRoot, '/', network, '/', sitename, '/Thumbnails'), full.names = T, pattern = '.jpg')
+ 
+    if(length(photos)>0){
+      
+      
+      cols = 3
+      imgSize = 300
+      
+      rows <-  ceiling(length(photos)/cols)
+      
+      td <- tempdir()
+      
+      html <- paste0('<BR><BR><p2 style="color: blue;">Click on the photo to enlarge view.</p2><table id="photosTable">')
+      # html <- paste0('<BR><BR><table id="photosTable">')
+      
+      
+      cnt=1
+      for (i in 1:rows) {
+        html <- paste0(html, '<tr>')
+        print(i)
+        
+        for (j in 1:cols) {
+          print(j)
+          
+          if(cnt<=length(photos)){
+            f <- photos[cnt]
+            
+            # outfile <- paste0(td, '/', basename(rec$photo_filename))
+            # 
+            # binData <- rec$thumbnail_data
+            # 
+            # content<-unlist(binData)
+            # writeBin(content, con = outfile)
+            # 
+            # if(stringr::str_to_upper(tools::file_ext(rec$photo_filename))=='JPG'){
+            #   img <- jpeg::readJPEG(outfile)
+            # }else{
+            #   img <- readPNG(outfile)
+            # }
+            # 
+            
+            b64img <-  base64enc::base64encode(f)
+            #b64img <- readLines(f)
+            
+            ext <- tools::file_ext(f)
+            if(ext=='jpg'){
+              img <- jpeg::readJPEG(f)
+              d <- dim(img)
+            } else if(ext=='png'){
+              img <- png::readPNG(f)
+              d <- dim(img)
+            }else{}
+            
+            m <- max(d[1], d[2])
+            prop <- imgSize/m
+            w = ceiling(d[2] * prop )
+            h = ceiling(d[1] * prop )
+            
+            #unlink(outfile)
+            
+            #imgData <- paste0('<a class="example-image-link" href="data:image/png;base64,', b64img, '",  data-lightbox="example-1"><img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", width=', w, ', height=', h, '/></a><p><a href="data:image/png;base64,', b64img, '" download="', paste0( rec$agency_code, "_", rec$proj_code, "_", rec$s_id, "_",  rec$photo_alt_text, ".", ext), '"><b>', rec$photo_alt_text,'</b></a></p>' )
+            #imgData <- paste0('<img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", width=', w, ', height=', h, '/><p><b>', rec$photo_alt_text,'</b></a></p>' )
+            
+            imgData <- paste0('<img class="example-image" src="data:image/png;base64,', b64img, '" alt="image-1", 
+                              width=', w, ', height=', h, ' style="cursor: pointer;" 
+                              onclick="Shiny.setInputValue(&quot;image_clicked&quot;, &quot;', basename(f) , '&quot;, {priority: &quot;event&quot;})" /><p>
+                              <b>', '</b></a></p>' )
+            
+            
+            cd <- paste0( '<td>', imgData, '</td>')
+            
+            
+          }else{
+            cd =paste0( '<td>', '', '</td>')
+          }
+          
+          cnt = cnt + 1
+          html <- paste0(html, '<td>', cd, '</td>')
+        }
+        html <- paste0(html, '</tr>')
+      }
+      html <- paste0(html, '</table>')
+      
+    }else{
+      html <- ''
+    }
+    
+    HTML(html)
+    
+  })
+  
+  
+  # Observe the image click event
+  observeEvent(input$image_clicked, {
+    
+    
+    showPageSpinner(caption = 'Retrieving photo from the database .....') 
+    
+    # if(RV$ConfigName=='NSMP'){
+    #   con <- OS$DB$Config$getCon(OS$DB$Config$DBNames$NatSoilRO)$Connection
+    # }else{
+    #   con <- OS$DB$Config$getCon(OS$DB$Config$DBNames$NatSoilProjects)$Connection
+    # }
+    # 
+    # rec <- OS$DB$Helpers$doQuery(con=con, paste0("SELECT * FROM dbo.PHOTOS where dbo.PHOTOS.photo_filename = '", input$image_clicked ,"'"))
+    # 
+    # td <- tempdir()
+    # 
+    # outfile2 <- paste0(td, '/', basename(rec$photo_filename))
+    # binData <- rec$photo_img
+    
+    # content<-unlist(binData)
+    # writeBin(content, con = outfile2)
+    
+    network <- RV$CurrentSiteData$Network[1]
+    sitename <- RV$CurrentSiteData$SiteName[1]
+    
+    bimg <- paste0(PhotoRoot, '/', network, '/', sitename, '/', input$image_clicked)
+    print(bimg)
+    
+    b64img <-  base64enc::base64encode(bimg)
+    ext <- tools::file_ext(input$image_clicked)
+    
+    
+    #srcstring <- paste0('<img class="big-image" src="data:image/jpg;base64,', b64img, '"/>')
+    imgData <- paste0('<img class="big-image" src="data:image/', 'jpg', ';base64,', b64img, '" alt="fullRes-image", width="', largePhotoWidth-30, '"/>
+                      <p><a href="data:image/','jpg',';base64,', b64img, '" download="', paste0( network, "_", network, "_", input$image_clicked), 
+                      '"><b>Download Image</b></a></p>
+                      
+                      ' )
+    #unlink(outfile2)
+    
+    
+    #print(imgData)
+    
+    showModal(modalDialog(
+      title = paste0("Bob's photo"),
+      HTML(imgData),
+      size = 'xl',
+      easyClose = F
+      
+    ))
+    
+    hidePageSpinner()
+  })
+  
+  
+  
+  
+
+  observeEvent(input$wgtGETDATA, {  
+    
+   req(RV$CurrentSiteData)
+    
+    sid <- 'C113'
+    agy <-199
+    proj <-  'CAN'
+    
+    url <- paste0('https://soils.csiro.au/data/natsoil-api/sites?agency_code=',agy, '&proj_code=', proj,  '&s_id=', sid, '&all=true')
+    resp <- GET(url, add_headers("APIKey"=RV$AccessKey))
+    
+    jsn <- content(resp, 'text')
+    
+  jl <- fromJSON(jsn, simplifyVector = F)
+  
+  if(length(jl)==0){
+    shinyalert::shinyalert('Please specify a valid site to view.')
+  }else{
+
+    RV$CurrentJSON <- jl
+    RV$CurrentHorizons <- suppressMessages( getHorizonData(jsnList = jl))
+    RV$CurrentLabResults <- suppressMessages( getLabData(jl))
+    RV$SiteDesc <- suppressMessages( getSiteDescription(jsnList = jl, RV$projTable, RV$agencyTable))
+    RV$CurrentLocation=suppressMessages( getProfileLocation(jl))
+    RV$CurrentSiteTable=suppressMessages( getSiteData(jl))
+    RV$CurrentObservationTable=suppressMessages( getObservationData(jl))
+    RV$CurrentNotesTable <- getNotes(jl)
+
+  }
+    
+  })
+  
+  
+  ####  Render profile diagram   ####  
+  
+  output$wgtProfile = renderPlot({
+    req(RV$CurrentHorizons)
+    
+    if(nrow(RV$CurrentHorizons) > 0){
+      df <- RV$CurrentHorizons
+      getSoilProfileDiagram('test', df)
+    }
+  }, height = 700, width = 400)
+  
+  
+  ####  Render Site Description   ####   
+  
+  output$wgtSiteDescription = renderText({
+    RV$SiteDesc
+  })
+  
+  output$labResultsTable = renderRHandsontable({
+    if(is.null(RV$CurrentLabResults))
+    {
+      df=data.frame()
+    }else{
+      df <- RV$CurrentLabResults
+    }
+    rhandsontable(df,   manualColumnResize = T, readOnly = TRUE, rowHeaders = F) %>% hot_cols(fixedColumnsLeft = 3)
+  })
+  
+  
+  
+  #### Render Lab Data Plots  #######
+  output$plots <- renderUI({
+    
+    wt <-  RV$CurrentLabResults
+    
+    if(nrow(RV$CurrentLabResults)==0){
+      return('')
+    }
+    
+    html <- '<table><tr>'
+    
+    np <- ncol(wt)-3
+    
+    cnt=0
+    for (i in 1:np) {
+      cnt=cnt+1
+      b64 <-  plotLabData(df=wt,i)
+      html <- paste0(html, '<td><img src="data:image/png;base64,', b64, '" 
+          width="', 250, '" 
+          height="', 300, '"></td>')
+      
+      if(cnt==4){
+        html <- paste0(html, '</tr><tr>')
+        cnt=0
+      }
+    }
+    
+    html <- paste0(html, '</tr></table')
+    
+    HTML(html)
+    
+    
+  })
   
   
   
@@ -468,7 +741,8 @@ server <- function(input, output, session) {
     #browser()
     
     tryCatch({
-      sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email=RV$Email, makeTS = T)
+
+      sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email='ross.searle@gmail.com', makeTS = T)
       RV$CurrentSiteData <- sd
       
     }, error = function(e) {

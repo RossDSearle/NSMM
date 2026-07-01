@@ -13,8 +13,9 @@ RV$CurrentSiteData$SiteName=SiteName
 RV$CurrentSiteData$Network=Network
 RV$Email <- 'ross.searle@gmail.com'
 RV$CurrentDate <- as.Date('2026-04-01')
+RV$AccessKey = ''
 
-RV$CurrentSiteData <- ol
+RV$CurrentSiteData <- getAllSiteData(Network=Network, SiteName = SiteName)
 
 session <- list()
 session$token <- '1234567890'

@@ -8,20 +8,53 @@
 
 Tab2_UI <- function() {
   
-  ns <- NS('Tab2')
+#  ns <- NS('Tab2')
   
   tabPanel("Site Information",  icon = icon("file-lines", tags$style()),
             HTML('<div style="margin-left: 20px; ">'),
-           # HTML('<H1>This page will show the soil description for the site and it would look something like below</H>
-           #      <p><img src="./Images/SoilMorhology.png" alt="Dummy soil morphology screen" width="750" height="550"></p>'),
+
            
            
-           selectInput("wgt_SiteInformation_Network_PhotoType", "Photo Type", choices=NULL, width = 350),
-           selectInput("wgt_SiteInformation_PhotoDescription", "Photo Description", choices=NULL, width = 350),
+           fluidRow(
+             
+             column(2,
+                    actionButton('wgtGETDATA', 'Natsoil'),
+                    plotOutput('wgtProfile')
+                    
+             ),
+             column(10,  tabsetPanel(type = "tabs",
+                                     ##### Site Description Tab  ####                            
+                                     tabPanel("Soil Description", 
+                                              htmlOutput('wgtSiteDescription'),
+                                             ),
+                                     
+                                     ##### Site Data Sheet View Tab  ####   
+                                     tabPanel("Soil Test Data",
+                                              htmlOutput("wgtLabResultsLabel"),
+                                              rHandsontableOutput('labResultsTable' )),
+ 
+                                     ##### Lab Data Plots Tab  #### 
+                                     tabPanel("Lab Data Plots", fluidRow(uiOutput('plots'))),
+                                     
+                                     tabPanel('Photos',  uiOutput('wgtPhotoViewer') %>% withSpinner(color="#0dc5c1"))
+                                     
+             )  
+             )
+           )
            
-           htmlOutput("WgtSiteInfoTab_SoilSiteImage"),
-          # htmlOutput("WgtSiteInfoTab_SoilSiteImages")
+           , HTML('</div>') 
            
-            HTML('</div>') 
            
-  )}
+           
+           
+          #  
+          #  htmlOutput('wgtSiteDescription'),
+          #  hidden(htmlOutput("wgtLabResultsLabel2")),
+          #  rHandsontableOutput('labResultsTable2' ),
+          #  
+          #  htmlOutput("WgtSiteInfoTab_SoilSiteImage"),
+          # # htmlOutput("WgtSiteInfoTab_SoilSiteImages")
+          #  
+          #   HTML('</div>') 
+           
+           )}

@@ -133,7 +133,7 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
     if(what=='silo'){
       url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM')
       data <- queryAPI(EP = url )
-      if(class(data)!='data.frame'){
+      if(class(data)!='list'){
         return(NULL)
       }
       data$Data$date <- as.Date(data$Data$date )
