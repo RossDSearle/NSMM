@@ -38,14 +38,17 @@ library(shinycssloaders)
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
-  APIUrl <<- 'http:'
-
+  APIUrl <<- 'http://203.101.224.137:8071/SensorAPI'
   source('/srv/plumber/TERNLandscapes/SoilMoistureProbesAPI/Backends/ObjectStore.R')
+  PhotoRoot <- ''
+  
 }else{
  
  # source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/Backends/ObjectStore.R')
   APIUrl <<- 'http://127.0.0.1:8071/SensorAPI/'  ### need to run script to make this available - C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/WebAPI/RunAPIAsync.R
+  #APIUrl <<- 'http://203.101.224.137:8071/SensorAPI'
   setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM')
+  PhotoRoot <- 'C:/Projects/NSMM/Photos/AppPhotoLibrary'
   }
 
 
@@ -60,7 +63,9 @@ source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
 source('Functions/Plotting.R')
-source('Functions/NatSoilFunctions.R')
+#source('Functions/NatSoilFunctions.R')
+
+source('Reporting/SoilInfoFunctions.R')
 
 codes <<- read.csv('Resources/codes.csv')
 projects <<- read.csv('Resources/projects.csv')
@@ -69,7 +74,7 @@ labMethods <<- read.csv('Resources/labMethods.csv')
 
 largePhotoWidth = 650
 
-PhotoRoot <- 'C:/Projects/NSMM/Photos/AppPhotoLibrary'
+NatSoilAccessKey = ''
 
 ### Get data from the API
 
@@ -199,7 +204,7 @@ server <- function(input, output, session) {
   RV$Email <- NULL
   RV$CurrentSite <- NULL
   RV$CurrentDate <- Sys.Date()
-  RV$ShowReporting <- F
+  RV$ShowReporting <- T
   RV$CurrentSensorSummaryTable <- NULL
   RV$Admin_SensorSummaryTable_SelectedRow <- NULL
   RV$CanPlotAdminSensors <- F
@@ -207,6 +212,7 @@ server <- function(input, output, session) {
   RV$CurrentSitePhotos = NULL
   RV$CurrentSiteData = NULL
   RV$Cookie <- NULL
+  RV$NatSoilAccessKey <- NatSoilAccessKey
   
 
   ###.####
@@ -222,6 +228,7 @@ server <- function(input, output, session) {
     
     photos <- list.files(paste0(PhotoRoot, '/', network, '/', sitename, '/Thumbnails'), full.names = T, pattern = '.jpg')
  
+   
     if(length(photos)>0){
       
       
@@ -265,12 +272,13 @@ server <- function(input, output, session) {
             n <- stringr::str_replace(n, 'Thumbnail_', '')
             imgName <- paste0(n)
             
+            
            
             imgData <- paste0('<img class="example-image" style="border: 15px solid white;"  src="data:image/png;base64,', b64img, '" alt="image-1", 
                               width=', w, ', height=', h, ' style="cursor: pointer;" 
                               onclick="Shiny.setInputValue(&quot;image_clicked&quot;, &quot;', basename(f) , '&quot;, {priority: &quot;event&quot;})" /><p>
                               <b>',imgName, '</b></a></p>' )
-            
+            print(imgData)
             
             cd <- paste0( '<td>', imgData, '</td>')
             
@@ -332,38 +340,29 @@ server <- function(input, output, session) {
   
   
   
-  
+#### GET Soil Info Data ####  
 
   observeEvent(input$wgtGETDATA, {  
     
-   req(RV$CurrentSiteData)
+    useDB=T
     
-    sid <- 'C113'
-    agy <-199
-    proj <-  'CAN'
-    
-    url <- paste0('https://soils.csiro.au/data/natsoil-api/sites?agency_code=',agy, '&proj_code=', proj,  '&s_id=', sid, '&all=true')
-    resp <- GET(url, add_headers("APIKey"=RV$AccessKey))
-    
-    jsn <- content(resp, 'text')
-    
-  jl <- fromJSON(jsn, simplifyVector = F)
-  
-  if(length(jl)==0){
-    shinyalert::shinyalert('Please specify a valid site to view.')
-  }else{
+    req(RV$CurrentSiteData)
+    if(useDB){
+      con <- dbConnect(RSQLite::SQLite(), 'C:/Projects/NSMM/SoilDB/TISM.db')
+      si <- getSoilInfo(con = con, agencyCode = '994', projectCode = 'TISM', siteID = 'Lake Boga', obsID = 1)
+    }else{
+      si <- getSoilInfo(con = NULL, agencyCode = '199', projectCode = 'CAN', siteID = 'C113', obsID = 1)
+    }
+   
+   #RV$CurrentJSON <- jl
+   RV$CurrentHorizons <- si$Horizons
+   RV$CurrentLabResults <- si$LabResults
+   RV$SiteDesc <- si$SiteDesc
+   RV$CurrentLocation=si$Location
+   RV$CurrentSiteTable=si$SiteTable
+   RV$CurrentObservationTable=si$ObservationTable
+   RV$CurrentNotesTable <- si$NotesTable
 
-    RV$CurrentJSON <- jl
-    RV$CurrentHorizons <- suppressMessages( getHorizonData(jsnList = jl))
-    RV$CurrentLabResults <- suppressMessages( getLabData(jl))
-    RV$SiteDesc <- suppressMessages( getSiteDescription(jsnList = jl, RV$projTable, RV$agencyTable))
-    RV$CurrentLocation=suppressMessages( getProfileLocation(jl))
-    RV$CurrentSiteTable=suppressMessages( getSiteData(jl))
-    RV$CurrentObservationTable=suppressMessages( getObservationData(jl))
-    RV$CurrentNotesTable <- getNotes(jl)
-
-  }
-    
   })
   
   
@@ -401,6 +400,8 @@ server <- function(input, output, session) {
   output$plots <- renderUI({
     
     wt <-  RV$CurrentLabResults
+    
+    colnames(wt)
     
     if(nrow(RV$CurrentLabResults)==0){
       return('')

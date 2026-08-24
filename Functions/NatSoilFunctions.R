@@ -12,141 +12,141 @@
 # }
 
 
-parseMetaDataAgencies <- function(jsnList){
-  
-  jn<-jsnList
-  
-  cnt=1
-  code<-vector('character', 1000)
-  name<-vector('character', 1000)
-  
-  for (i in 1:length(jn)) {
-    code[cnt] <- getVals(jn[[i]], 'agency_code')
-    name[cnt] <- getVals(jn[[i]], 'agency_name')
-    cnt=cnt+1
-  }
-  odf <- data.frame(code, name)[1:cnt,]
-  return(odf)
-}
-
-parseMetaDataProjects <- function(jsnList){
-  
-  jn<-jsnList
-
-  
-  cnt=1
-  a<-vector('character', 100000)
-  p<-vector('character', 100000)
-  pd<-vector('character', 100000)
-  psd<-vector('character', 100000)
-  pfd<-vector('character', 100000)
-
-  for (i in 1:length(jn)) {
-    ac <- getVals(jn[[i]], 'agency_code')
-    
-    for (j in 1:length(jn[[i]]$zProjects)) {
-      a[cnt] <- ac
-      p[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_code')
-      pd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_name')
-      psd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_start_date')
-      pfd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_finish_date')
-      cnt=cnt+1
-    }
-    
-  }
-  odf <- data.frame(agencyCode=a, code=p, name=pd, start=psd, end=pfd)[1:cnt,]
-  return(odf)
-  
-}
-
-parseMetaDataSites <- function(jsnList){
-  
-  jn<-jsnList
- # jn<-jsnL
-  
-     cnt=1
-     lat<-vector('character', 100000)
-     lon<-vector('character', 100000)
-     sid<-vector('character', 100000)
-     agy<-vector('character', 100000)
-     proj<-vector('character', 100000)
-     
-    for (i in 1:length(jn)) {
-      a <- getVals(jn[[i]], 'agency_code')
-      ad <- getVals(jn[[i]], 'agency_name')
-      for (j in 1:length(jn[[i]]$zProjects)) {
-        p <- getVals(jn[[i]]$zProjects[[j]], 'proj_code')
-        pd <- getVals(jn[[i]]$zProjects[[j]], 'proj_name')
-        
-        for (k in 1:length(jn[[i]]$zProjects[[j]]$zSites)) {
-          
-          if(length(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations)>0){
-            lat[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations[[1]], 'latitude')
-            lon[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations[[1]], 'longitude')
-          }
-          sid[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]], 's_id')
-          proj[cnt] <- p
-          agy[cnt] <- a
-
-           cnt=cnt+1
-        }
-        }
-      }
-odf <- data.frame(agency=agy, project=proj, sid=sid, longitude=lon, latitude=lat)[1:cnt,]
-#write.csv(odf, 'c:/temp/sites.csv')
-idxs <- which(odf$longitude=='')
-
-
-if(length(idxs) > 0){
-odf2 <- odf[-idxs,]
-}else{
-  odf2 <- odf
-}
-
-#write.csv(odf, 'c:/temp/sites.csv')
-return(odf2)
-}
-
-
+# parseMetaDataAgencies <- function(jsnList){
+#   
+#   jn<-jsnList
+#   
+#   cnt=1
+#   code<-vector('character', 1000)
+#   name<-vector('character', 1000)
+#   
+#   for (i in 1:length(jn)) {
+#     code[cnt] <- getVals(jn[[i]], 'agency_code')
+#     name[cnt] <- getVals(jn[[i]], 'agency_name')
+#     cnt=cnt+1
+#   }
+#   odf <- data.frame(code, name)[1:cnt,]
+#   return(odf)
+# }
+# 
+# parseMetaDataProjects <- function(jsnList){
+#   
+#   jn<-jsnList
+# 
+#   
+#   cnt=1
+#   a<-vector('character', 100000)
+#   p<-vector('character', 100000)
+#   pd<-vector('character', 100000)
+#   psd<-vector('character', 100000)
+#   pfd<-vector('character', 100000)
+# 
+#   for (i in 1:length(jn)) {
+#     ac <- getVals(jn[[i]], 'agency_code')
+#     
+#     for (j in 1:length(jn[[i]]$zProjects)) {
+#       a[cnt] <- ac
+#       p[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_code')
+#       pd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_name')
+#       psd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_start_date')
+#       pfd[cnt] <- getVals(jn[[i]]$zProjects[[j]], 'proj_finish_date')
+#       cnt=cnt+1
+#     }
+#     
+#   }
+#   odf <- data.frame(agencyCode=a, code=p, name=pd, start=psd, end=pfd)[1:cnt,]
+#   return(odf)
+#   
+# }
+# 
+# parseMetaDataSites <- function(jsnList){
+#   
+#   jn<-jsnList
+#  # jn<-jsnL
+#   
+#      cnt=1
+#      lat<-vector('character', 100000)
+#      lon<-vector('character', 100000)
+#      sid<-vector('character', 100000)
+#      agy<-vector('character', 100000)
+#      proj<-vector('character', 100000)
+#      
+#     for (i in 1:length(jn)) {
+#       a <- getVals(jn[[i]], 'agency_code')
+#       ad <- getVals(jn[[i]], 'agency_name')
+#       for (j in 1:length(jn[[i]]$zProjects)) {
+#         p <- getVals(jn[[i]]$zProjects[[j]], 'proj_code')
+#         pd <- getVals(jn[[i]]$zProjects[[j]], 'proj_name')
+#         
+#         for (k in 1:length(jn[[i]]$zProjects[[j]]$zSites)) {
+#           
+#           if(length(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations)>0){
+#             lat[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations[[1]], 'latitude')
+#             lon[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]]$locations[[1]], 'longitude')
+#           }
+#           sid[cnt] <- getVals(jn[[i]]$zProjects[[j]]$zSites[[k]], 's_id')
+#           proj[cnt] <- p
+#           agy[cnt] <- a
+# 
+#            cnt=cnt+1
+#         }
+#         }
+#       }
+# odf <- data.frame(agency=agy, project=proj, sid=sid, longitude=lon, latitude=lat)[1:cnt,]
+# #write.csv(odf, 'c:/temp/sites.csv')
+# idxs <- which(odf$longitude=='')
+# 
+# 
+# if(length(idxs) > 0){
+# odf2 <- odf[-idxs,]
+# }else{
+#   odf2 <- odf
+# }
+# 
+# #write.csv(odf, 'c:/temp/sites.csv')
+# return(odf2)
+# }
 
 
-initApp <- function(CSIROauth, develop, accessKey){
-  
 
-  if(develop == T){
-    sinfo <<- read.csv('c:/projects/ANSIS/SiteSheet/sites.csv')
-    codes <<- read.csv('c:/projects/ANSIS/SiteSheet/codes.csv')
-    siteJSN <<- readLines('c:/projects/ANSIS/SiteSheet/site.jsn')
-    labMethods <<- read.csv('c:/projects/ANSIS/SiteSheet/labMethods.csv')
-    agenciesT <<- read.csv('c:/projects/ANSIS/SiteSheet/agencies.csv')
-    projectsT <<- read.csv('c:/projects/ANSIS/SiteSheet/projects.csv')
-  }else{
-    
-    #if(CSIROauth){
-        resp <- GET('https://soils.csiro.au/data/natsoil-api/site-meta-data?All=false', add_headers("APIKey"=accessKey))
-        print(paste0('Getting data from the api using - ', accessKey))
-    # }else{
-    #     resp <- GET('https://soils.csiro.au/data/natsoil-api/site-meta-data?All=false')
-    # }
 
-    jsn <- content(resp, 'text')
-    jsnL <- fromJSON(jsn, simplifyVector = F)
-  #  cat(jsn, file='c:/temp/sites.json')
-  #  saveRDS(jsnL, 'c:/temp/sites.rds')
-  }
-  return(jsnL)
-}
+# initApp <- function(CSIROauth, develop, accessKey){
+#   
+# 
+#   if(develop == T){
+#     sinfo <<- read.csv('c:/projects/ANSIS/SiteSheet/sites.csv')
+#     codes <<- read.csv('c:/projects/ANSIS/SiteSheet/codes.csv')
+#     siteJSN <<- readLines('c:/projects/ANSIS/SiteSheet/site.jsn')
+#     labMethods <<- read.csv('c:/projects/ANSIS/SiteSheet/labMethods.csv')
+#     agenciesT <<- read.csv('c:/projects/ANSIS/SiteSheet/agencies.csv')
+#     projectsT <<- read.csv('c:/projects/ANSIS/SiteSheet/projects.csv')
+#   }else{
+#     
+#     #if(CSIROauth){
+#         resp <- GET('https://soils.csiro.au/data/natsoil-api/site-meta-data?All=false', add_headers("APIKey"=accessKey))
+#         print(paste0('Getting data from the api using - ', accessKey))
+#     # }else{
+#     #     resp <- GET('https://soils.csiro.au/data/natsoil-api/site-meta-data?All=false')
+#     # }
+# 
+#     jsn <- content(resp, 'text')
+#     jsnL <- fromJSON(jsn, simplifyVector = F)
+#   #  cat(jsn, file='c:/temp/sites.json')
+#   #  saveRDS(jsnL, 'c:/temp/sites.rds')
+#   }
+#   return(jsnL)
+# }
 
-isCSIRO <- function(ip){
+# isCSIRO <- function(ip){
+# 
+#   bits <- str_split(ip, '[.]')
+#   ipRoot <- paste0(bits[[1]][1], '.', bits[[1]][2])
+#   ips <- read.csv(paste0('./Secrets/ip.csv'))
+#   isInternal <- ipRoot %in% ips$IP
+#   return(isInternal)
+# }
 
-  bits <- str_split(ip, '[.]')
-  ipRoot <- paste0(bits[[1]][1], '.', bits[[1]][2])
-  ips <- read.csv(paste0('./Secrets/ip.csv'))
-  isInternal <- ipRoot %in% ips$IP
-  return(isInternal)
-}
-
-getSiteDescription <- function(jsnList, projects, agencies){
+getSiteDescriptionAPI <- function(jsnList, projects, agencies){
   
   j <- jsnList
   
@@ -398,7 +398,7 @@ getSiteData <- function(jsnList){
   
 }
 
-getObservationData <- function(jsnList){
+getObservationDataAPI <- function(jsnList){
   
   j <- jsnList
   o <- j[[1]]$z_observations[[1]]
@@ -430,7 +430,7 @@ getObservationData <- function(jsnList){
   
 }
 
-getNotes <- function(jsnList){
+getNotesAPI <- function(jsnList){
   
   j <- jsnList
 
@@ -449,7 +449,7 @@ getNotes <- function(jsnList){
   }
 }
   
-getHorizonData <- function(jsnList){
+getHorizonDataAPI <- function(jsnList){
 
     j <- jsnList
     #json_tree_view(jsn)
@@ -529,7 +529,7 @@ getHorizonData <- function(jsnList){
 
 
 
-getLabData <- function(jsnList){
+getLabDataAPI <- function(jsnList){
   jl <- jsnList
   
   hors <- jl[[1]]$z_observations[[1]]$z_horizons
@@ -679,7 +679,7 @@ getLabDataOld <- function(jsnList){
 
 
 
-getVals<- function(obj, attribute, domain=NULL){
+getValsAPI <- function(obj, attribute, domain=NULL){
   
   idx <- which(names(obj)==attribute)
   v <- as.character(obj[idx])
@@ -717,9 +717,9 @@ getVals<- function(obj, attribute, domain=NULL){
 
 
 
-getHueValueChroma <- function(){
-  
-}
+# getHueValueChroma <- function(){
+#   
+# }
 
 getSoilProfileDiagram <- function(sid, p){
   
@@ -851,7 +851,7 @@ getSoilProfileDiagram <- function(sid, p){
 } 
 
 
-getProfileLocation <- function(jsnList){
+getProfileLocationAPI <- function(jsnList){
   jl <- jsnList
   lon=NULL
   lat=NULL
@@ -871,7 +871,7 @@ getProfileLocation <- function(jsnList){
     }
 }
 
-getProfileID <- function(jsnList){
+getProfileIDAPI <- function(jsnList){
   jl <- jsnList
   sid <- paste0( jl[[1]]$agency_code, '_', jl[[1]]$proj_code, '_', jl[[1]]$s_id)
   return(sid)
