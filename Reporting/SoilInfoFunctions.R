@@ -9,8 +9,9 @@ getSoilInfo <- function(con = NULL, agencyCode, projectCode, siteID, obsID = 1){
     print('Using DB')
     
    
-    s <- getSiteDescriptionDB(con = con, agencyCode = '994', projectCode = 'TISM', siteID = 'Lake Boga', obsID = 1)
-    SI$Horizons <- s$HorizonText
+    s <- getSiteDescriptionDB(con = con, agencyCode = agencyCode, projectCode = projectCode, siteID = siteID, obsID = 1)
+    #SI$Horizons <-  s$HorizonText
+    SI$Horizons <- s$HorizonData
     SI$SiteDesc <- s$HTML
     SI$LabResults <- s$LabData
     SI$Location <- s$CurrentSiteLocation
@@ -18,11 +19,18 @@ getSoilInfo <- function(con = NULL, agencyCode, projectCode, siteID, obsID = 1){
     SI$ObservationTable <- ''
     SI$NotesTable <- ''
     
+    # SI$Horizons$ud <- as.integer(SI$Horizons$ud*100)
+    # SI$Horizons$ld <- as.integer(SI$Horizons$ld*100)
     
     
   } else{
     
-    url <- paste0('https://soils.csiro.au/data/natsoil-api/sites?agency_code=',agencyCode, '&proj_code=', projectCode,  '&s_id=', siteID, '&all=true')
+    # agencyCode=199
+    # projectCode='CAN'
+    # siteID='C1'
+    # 
+    
+    url <- URLencode(paste0('https://soils.csiro.au/data/natsoil-api/sites?agency_code=',agencyCode, '&proj_code=', projectCode,  '&s_id=', siteID, '&all=true'))
     resp <- GET(url, add_headers("APIKey"=RV$AccessKey))
     
     jsn <- content(resp, 'text')
@@ -368,12 +376,16 @@ for (i in 1:nrow(horizonInfo)) {
   hsubdiv <- getValsDB(o, 'h_desig_subdiv')
   hnsuf <- getValsDB(o, 'h_desig_suffix')
   hname <- paste0(hpref, hn, hsubdiv, hnsuf)
+  hnameraw <- hname
   rawDesig <- paste0(hpref, hn, hsubdiv, hnsuf)
   if (!grepl("^\\s*$", hname)){hname=paste0('<B>', hname, ' : </B>')}
 
   str_grade <- getValsDB(structureInfo, 'str_ped_grade', 'C_STR_PED_GRADE')
+  str_graderaw <- getValsDB(structureInfo, 'str_ped_grade')
   str_size <- getValsDB(structureInfo, 'str_ped_size', 'N_STR_PED_SIZE')
+  str_sizeraw <- getValsDB(structureInfo, 'str_ped_size')
   str_type <- getValsDB(structureInfo, 'str_ped_type', 'C_STR_PED_TYPE')
+  str_typeraw <- getValsDB(structureInfo, 'str_ped_type')
   hstructure <- paste0(str_grade, ' ', str_size, ' ', str_type)
   if (!grepl("^\\s*$", hstructure)){hstructure=paste0(str_trim(hstructure), ' structure; ')}
 
@@ -382,14 +394,17 @@ for (i in 1:nrow(horizonInfo)) {
    if(b_dist!=''){bdy <- paste0(str_trim(b_dist), ' change to')}
 
   col <-  getValsDB(colourInfo, 'col_hue_val_chrom', 'C_MUNSELL_COLOUR')
+  colraw <-  getValsDB(colourInfo, 'col_hue_val_chrom')
   colcode <-  getValsDB(colourInfo, 'col_hue_val_chrom')
   if(colcode!=''){colcode=paste0(' (', colcode, '); ')}
 
    tex <- getValsDB(o, 'h_texture', 'C_H_TEXTURE')
+   texraw <- getValsDB(o, 'h_texture')
    if(tex!=''){tex=paste0(str_trim(tex), '; ')}
 
   phVal <- getValsDB(phInfo, 'ph_value')
   if(phVal!=''){ph <- paste0('pH : ', round(as.numeric(getValsDB(phInfo, 'ph_value')), digits = 1), '; ')}
+  
 
   cf_abun <- getValsDB(CFInfo, 'cf_abun', 'N_CF_ABUN')
   cf_abun <- str_replace(cf_abun, ',','')
@@ -401,6 +416,7 @@ for (i in 1:nrow(horizonInfo)) {
   cf_size <-  getValsDB(CFInfo, 'cf_size', 'N_CF_SIZE')
   cf_sizeC <- getValsDB(CFInfo, 'cf_size')
   cf_lith <-  getValsDB(CFInfo, 'cf_lith', 'C_LITHOLOGY')
+  cf_lithC <-  getValsDB(CFInfo, 'cf_lith')
   cf <- paste0(cf_abun, ' ',cf_dist, ' ',cf_shape, ' ',cf_size, ' ',cf_lith )
   cf <- str_to_sentence(cf)
   
@@ -408,19 +424,28 @@ for (i in 1:nrow(horizonInfo)) {
     ocf<-''} else if (!str_trim(cf) == 'No coarse fragments'){ ocf <- paste0(cf, ' coarse fragments; ')  }else {ocf<- 'No coarse fragments; '}
 
   seg_abun <- getValsDB(segInfo, 'seg_abun', 'N_SEG_ABUN')
+  seg_abunraw <- getValsDB(segInfo, 'seg_abun')
   seg_abun <- str_replace(seg_abun, ',','')
-  seg_form<- getValsDB(segInfo, 'seg_form', 'C_SEG_FORM')
+  seg_form <- getValsDB(segInfo, 'seg_form', 'C_SEG_FORM')
+  seg_formraw <- getValsDB(segInfo, 'seg_form')
   seg_nat <- getValsDB(segInfo, 'seg_nature', 'C_SEG_NATURE')
+  seg_natraw <- getValsDB(segInfo, 'seg_nature')
   seg_size <-  getValsDB(segInfo, 'seg_size', 'N_SEG_SIZE')
+  seg_sizeraw <-  getValsDB(segInfo, 'seg_size')
   seg_strength <-  getValsDB(segInfo, 'seg_strength', 'C_SEG_STRENGTH')
+  seg_strengthraw <-  getValsDB(segInfo, 'seg_strength')
   seg <- paste0(seg_abun, ' ',seg_nat, ' ', seg_form, ' ', seg_size, ' ',seg_strength )
   if(str_trim(seg)==''){
     oseg<-''} else if (!str_trim(seg) == 'No segregations'){ oseg <- paste0(str_trim(seg), ' segregations; ')  }else {oseg<- 'No segregations; '}
 
   mott_cont <- getValsDB(mottleInfo, 'mott_contrast', 'C_CONTRAST')
+  mott_contraw <- getValsDB(mottleInfo, 'mott_contrast')
   mott_abun <- getValsDB(mottleInfo, 'mott_abun', 'N_MOTT_ABUN')
-  mott_size<- getValsDB(mottleInfo, 'mott_size', 'N_MOTT_SIZE')
+  mott_abunraw <- getValsDB(mottleInfo, 'mott_abun')
+  mott_size <- getValsDB(mottleInfo, 'mott_size', 'N_MOTT_SIZE')
+  mott_sizeraw <- getValsDB(mottleInfo, 'mott_size')
   mott_col <- getValsDB(mottleInfo, 'mott_hue_val_chrom', 'C_MOTT_COLOUR') #getValsDB(mottleInfo, 'mott_hue_val_chrom')
+  mott_colraw <- getValsDB(mottleInfo, 'mott_hue_val_chrom')
   mot <- paste0(mott_cont, ' ', mott_abun, ' ',mott_size, ' ', mott_col )
   if(str_trim(mot)==''){
     omot<-''} else if (!str_trim(mot) == 'No mottles' ){ omot <- paste0(mot, ' mottles; ')  }else {omot<- 'No mottles; '}
@@ -473,8 +498,18 @@ for (i in 1:nrow(horizonInfo)) {
   hrl$Description <- paste0( col, colcode, tex, hstructure, ph, ocf, oseg, omot, str, ocut, opan, oroot, ' ', bdy)
   htext[[i]] <- hrl
  
-  horsdf <- rbind(horsdf, data.frame(cf_abun=cf_abun, cf_dist=cf_distC, cf_size=cf_sizeC, cf_sshape=cf_shapeC))
-  
+
+  #horsdf <- data.frame()
+  horsdf <- rbind(horsdf, data.frame(h_no=i, ud=o$h_upper_depth, ld=o$h_lower_depth, hname=rawDesig, colour=colraw, colm=o$h_soil_water_stat, tex=texraw, 
+                                     sGrade=str_graderaw, sSize=str_sizeraw, sType=str_typeraw,
+                                     drain=o$h_drainage, perm=o$h_permeability,
+                                     cf_abun=cf_abunC, cf_dist=cf_distC, cf_shape=cf_shapeC, cf_size=cf_sizeC, cf_lith=cf_lithC,
+                                     mott_abun=mott_abunraw, mott_size=mott_sizeraw, mott_col=mott_colraw, mott_hvc='',
+                                     pH='', ec='', seg_abun=seg_abunraw, seg_form= seg_formraw, seg_nat=seg_natraw,seg_size=seg_sizeraw, seg_strength=seg_strengthraw, 
+                                     dist=o$h_bound_distinct, shape=o$h_bound_shape, carb=o$h_carbonate_eff, disp=o$h_dispersion, 
+                                     sticky=o$h_stickiness, repel=o$h_water_repellence
+                                     
+  ))
   
 
 }
@@ -489,7 +524,7 @@ for (i in 1:nrow(horizonInfo)) {
   rl=list()
   rl$SiteData <- ol
   rl$HTML <- allhtml
-  rl$HorizonData <- NULL
+  rl$HorizonData <- horsdf
   rl$CurrentSiteLocation <- CurrentSiteLocation
   rl$ProfPlotData <- ProfPlotData
   rl$LabData <- labData
@@ -892,7 +927,7 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
   
   locT<-'Unknown'
   loc<-''
-  xy <- getProfileLocation(j)
+  xy <- getProfileLocationAPI(j)
   xl=xy$lon
   yl=xy$lat
   
@@ -923,9 +958,9 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
   html <- paste0(html, '<tr><td><b>Agency: </b>', an, '</td>')
   html <- paste0(html, '<td><b>Project: </b>', pn, '</td></tr>')
   
-  person <- getVals(j[[1]], 'desc_by', 'C_S_DESC_BY')
+  person <- getValsAPI(j[[1]], 'desc_by', 'C_S_DESC_BY')
   html <- paste0(html, '<tr><td><b>Described by: </b>', person, '</td>')
-  dt <- getVals(j[[1]], 's_date_desc')
+  dt <- getValsAPI(j[[1]], 's_date_desc')
   sdt <- ''
   if(nchar(dt) > 0){
     dy <- str_sub(dt, 1,2)
@@ -935,23 +970,23 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
   }
   html <- paste0(html, '<td><b>Date Described: </b>', sdt, '</td></tr>')
   
-  aOrd <- getVals( j[[1]]$z_observations[[1]], 'o_asc_ord', 'C_O_ASC_ORD')
-  aSubOrd <- getVals( j[[1]]$z_observations[[1]], 'o_asc_subord', 'C_O_ASC')
-  agrp <- getVals( j[[1]]$z_observations[[1]], 'o_asc_gg', 'C_O_ASC')
-  asubgrp <- getVals( j[[1]]$z_observations[[1]], 'o_asc_subg', 'C_O_ASC')
+  aOrd <- getValsAPI( j[[1]]$z_observations[[1]], 'o_asc_ord', 'C_O_ASC_ORD')
+  aSubOrd <- getValsAPI( j[[1]]$z_observations[[1]], 'o_asc_subord', 'C_O_ASC')
+  agrp <- getValsAPI( j[[1]]$z_observations[[1]], 'o_asc_gg', 'C_O_ASC')
+  asubgrp <- getValsAPI( j[[1]]$z_observations[[1]], 'o_asc_subg', 'C_O_ASC')
   html <- paste0(html, '<tr><td><b>Aust Soil Classification: </b>', asubgrp, ' ',agrp, ' ', aSubOrd, ' ', aOrd, '</td>')
-  html <- paste0(html, '<td><b>Great Soil Group: </b>', getVals(j[[1]]$z_observations[[1]], 'o_gsg', 'C_O_GSG'), '</td></tr>')
-  html <- paste0(html, '<tr><td><b>Principal Profile Form: </b>', getVals(j[[1]]$z_observations[[1]], 'o_ppf'), '</td>')
-  html <- paste0(html, '<td><b>Disturbance: </b>', ifelse(length(j[[1]]$z_observations[[1]]$z_disturbances)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_disturbances[[1]], 'dist_type', 'C_DIST_TYPE')), '</td></tr>')
+  html <- paste0(html, '<td><b>Great Soil Group: </b>', getValsAPI(j[[1]]$z_observations[[1]], 'o_gsg', 'C_O_GSG'), '</td></tr>')
+  html <- paste0(html, '<tr><td><b>Principal Profile Form: </b>', getValsAPI(j[[1]]$z_observations[[1]], 'o_ppf'), '</td>')
+  html <- paste0(html, '<td><b>Disturbance: </b>', ifelse(length(j[[1]]$z_observations[[1]]$z_disturbances)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_disturbances[[1]], 'dist_type', 'C_DIST_TYPE')), '</td></tr>')
   
-  html <- paste0(html, '<td><b>Landform Pattern: </b>', getVals(j[[1]], 's_patt_type', 'C_S_PATT_TYPE'), '</td>')
-  html <- paste0(html, '<td><b>Landform Element: </b>', getVals(j[[1]], 's_elem_type', 'C_S_ELEM_TYPE'), '</td></tr>')
+  html <- paste0(html, '<td><b>Landform Pattern: </b>', getValsAPI(j[[1]], 's_patt_type', 'C_S_PATT_TYPE'), '</td>')
+  html <- paste0(html, '<td><b>Landform Element: </b>', getValsAPI(j[[1]], 's_elem_type', 'C_S_ELEM_TYPE'), '</td></tr>')
   
-  html <- paste0(html, '<td><b>Morphological Type: </b>', getVals(j[[1]], 's_morph_type', 'C_S_MORPH_TYPE'), '</td>')
-  html <- paste0(html, '<td><b>Relief Modal Slope: </b>', getVals(j[[1]], 's_rel_ms_class', 'C_S_REL_MS_CLASS'), '</td></tr>')
+  html <- paste0(html, '<td><b>Morphological Type: </b>', getValsAPI(j[[1]], 's_morph_type', 'C_S_MORPH_TYPE'), '</td>')
+  html <- paste0(html, '<td><b>Relief Modal Slope: </b>', getValsAPI(j[[1]], 's_rel_ms_class', 'C_S_REL_MS_CLASS'), '</td></tr>')
   
-  html <- paste0(html, '<td><b>Slope Class: </b>', getVals(j[[1]], 's_slope_class', 'C_S_SLOPE_CLASS'), '</td>')
-  html <- paste0(html, '<td><b>Slope: </b>', getVals(j[[1]], 's_slope'), ' % </td></tr>')
+  html <- paste0(html, '<td><b>Slope Class: </b>', getValsAPI(j[[1]], 's_slope_class', 'C_S_SLOPE_CLASS'), '</td>')
+  html <- paste0(html, '<td><b>Slope: </b>', getValsAPI(j[[1]], 's_slope'), ' % </td></tr>')
   
   veg=''
   if(!is.null(j[[1]]$z_observations[[1]]$z_veg_strata) & length(j[[1]]$z_observations[[1]]$z_veg_strata)>0){
@@ -971,29 +1006,29 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
     }
   }
   
-  mr_type <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getVals(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_type', 'C_MR_TYPE'))
-  mr_hint <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getVals(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_horizontal_interval'))
-  mr_vint <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getVals(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_vertical_interval'))
+  mr_type <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getValsAPI(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_type', 'C_MR_TYPE'))
+  mr_hint <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getValsAPI(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_horizontal_interval'))
+  mr_vint <- ifelse(length(j[[1]]$z_observations[[1]]$z_micro_reliefs)==0, '', getValsAPI(j[[1]]$z_observations[[1]]$z_micro_reliefs[[1]], 'mr_vertical_interval'))
   mr <- paste0(mr_type, ' ',mr_hint, ' ',mr_vint)
   if (!grepl("^\\s*$", mr)){ omr<- paste0(mr)  }else {omr<- ''}
   
   html <- paste0(html, '<td><b>Veg species: </b>', veg, '</td>')
   html <- paste0(html, '<td><b>Microrelief: </b>',  mr , '</td></tr>')
   
-  scf_abun <-ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_abun', 'N_CF_ABUN'))
-  scf_size <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_size', 'N_CF_SIZE'))
-  scf_shape <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_shape', 'C_CF_SHAPE'))
-  scf_lith <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_lith', 'C_LITHOLOGY'))
+  scf_abun <-ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_abun', 'N_CF_ABUN'))
+  scf_size <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_size', 'N_CF_SIZE'))
+  scf_shape <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_shape', 'C_CF_SHAPE'))
+  scf_lith <- ifelse(length(j[[1]]$z_observations[[1]]$z_surface_coarse_frags)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_surface_coarse_frags[[1]], 'scf_lith', 'C_LITHOLOGY'))
   scf <- paste0(scf_abun, ' ',scf_size, ' ',scf_shape, ' ', scf_lith)
   if (!grepl("^\\s*$", scf)){ oscf<- paste0(scf)  }else {oscf<- ''}
   
-  scon <- ifelse(length(j[[1]]$z_observations[[1]]$z_surf_conditions)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_surf_conditions[[1]], 'scon_stat', 'C_SCON_STAT'))
+  scon <- ifelse(length(j[[1]]$z_observations[[1]]$z_surf_conditions)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_surf_conditions[[1]], 'scon_stat', 'C_SCON_STAT'))
   
   html <- paste0(html, '<td><b>Surface Coarse Fragments: </b>', oscf, '</td>')
   html <- paste0(html, '<td><b>Surface Condition: </b>',  scon , '</td></tr>')
   
-  ro_abun <-ifelse(length(j[[1]]$z_observations[[1]]$z_rock_outcrops)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_rock_outcrops[[1]], 'ro_abun', 'N_RO_ABUN'))
-  ro_lith <- ifelse(length(j[[1]]$z_observations[[1]]$z_rock_outcrops)==0, '',  getVals(j[[1]]$z_observations[[1]]$z_rock_outcrops[[1]], 'ro_lith', 'C_LITHOLOGY')) 
+  ro_abun <-ifelse(length(j[[1]]$z_observations[[1]]$z_rock_outcrops)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_rock_outcrops[[1]], 'ro_abun', 'N_RO_ABUN'))
+  ro_lith <- ifelse(length(j[[1]]$z_observations[[1]]$z_rock_outcrops)==0, '',  getValsAPI(j[[1]]$z_observations[[1]]$z_rock_outcrops[[1]], 'ro_lith', 'C_LITHOLOGY')) 
   ro <- paste0(ro_abun, ' ',ro_lith)
   if (!grepl("^\\s*$", ro)){ oro <- paste0(ro)  }else {oro <- ''}
   html <- paste0(html, '<td><b>Rock Outcrop: </b>', oro, '</td>')
@@ -1003,7 +1038,7 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
   n1 <- j[[1]]$s_notes
   n2 <-  j[[1]]$z_observations[[1]]$o_notes
   html <- paste0(html, '<td colspan="2"><b>Notes: </b>',n1, ' - ', n2, '</td>')
-  # html <- paste0(html, '<td><b>Microrelief: </b>',  getVals(j[[1]]$z_observations[[1]]$z_micro_releifs[[1]],  'mr_type'), '</td></tr>')
+  # html <- paste0(html, '<td><b>Microrelief: </b>',  getValsAPI(j[[1]]$z_observations[[1]]$z_micro_releifs[[1]],  'mr_type'), '</td></tr>')
   
   
   
@@ -1025,69 +1060,69 @@ getSiteDescriptionAPI <- function(jsnList, projects, agencies){
       tex<-''
       colcode=''
       
-      hpref <- getVals(o, 'h_desig_num_pref')
-      hname <- getVals(o, 'h_desig_master')
-      hsubdiv <- getVals(o, 'h_desig_subdiv')
-      hnsuf <- getVals(o, 'h_desig_suffix')
+      hpref <- getValsAPI(o, 'h_desig_num_pref')
+      hname <- getValsAPI(o, 'h_desig_master')
+      hsubdiv <- getValsAPI(o, 'h_desig_subdiv')
+      hnsuf <- getValsAPI(o, 'h_desig_suffix')
       hname <- paste0(hpref, hname, hsubdiv, hnsuf)
       if (!grepl("^\\s*$", hname)){hname=paste0('<B>', hname, ' : </B>')}
       
-      str_grade <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_grade', domain = 'C_STR_PED_GRADE'))
-      str_size <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_size', domain = 'N_STR_PED_SIZE'))
-      str_type <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_type', domain = 'C_STR_PED_TYPE'))
+      str_grade <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_grade', domain = 'C_STR_PED_GRADE'))
+      str_size <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_size', domain = 'N_STR_PED_SIZE'))
+      str_type <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_type', domain = 'C_STR_PED_TYPE'))
       
       hstructure <- paste0(str_grade, ' ', str_size, ' ', str_type)
       if (!grepl("^\\s*$", hstructure)){hstructure=paste0(hstructure, ' structure; ')}
       
       
-      b_dist <- getVals(o, 'h_bound_distinct', 'N_H_BOUND_DISTINCT')
+      b_dist <- getValsAPI(o, 'h_bound_distinct', 'N_H_BOUND_DISTINCT')
       if(b_dist!=''){bdy <- paste0(b_dist, ' change to')}
       
-      col <-  ifelse(length(o$z_colours)==0, '', getVals(o$z_colours[[1]], 'col_hue_val_chrom', 'C_MUNSELL_COLOUR'))
-      colcode <-  ifelse(length(o$z_colours)==0, '', getVals(o$z_colours[[1]], 'col_hue_val_chrom_desc'))
+      col <-  ifelse(length(o$z_colours)==0, '', getValsAPI(o$z_colours[[1]], 'col_hue_val_chrom', 'C_MUNSELL_COLOUR'))
+      colcode <-  ifelse(length(o$z_colours)==0, '', getValsAPI(o$z_colours[[1]], 'col_hue_val_chrom_desc'))
       if(colcode!=''){colcode=paste0(' (', colcode, '); ')}
       
-      tex <- getVals(o, 'h_texture', 'C_H_TEXTURE')
+      tex <- getValsAPI(o, 'h_texture', 'C_H_TEXTURE')
       if(tex!=''){tex=paste0(tex, '; ')}
       
-      phVal <- ifelse(length(o$z_phs)==0, '', getVals(o$z_phs[[1]], 'ph_value'))
+      phVal <- ifelse(length(o$z_phs)==0, '', getValsAPI(o$z_phs[[1]], 'ph_value'))
       if(phVal!=''){ph <- paste0('pH : ', phVal, '; ')}  
       
-      ec <- getVals(o, 'h_ec')
+      ec <- getValsAPI(o, 'h_ec')
       if(ec!=''){ph <- paste0('EC : ', ec, '; ')}  
       
-      drain <- getVals(o, 'h_drainage', 'C_O_DRAINAGE')
+      drain <- getValsAPI(o, 'h_drainage', 'C_O_DRAINAGE')
       if(drain!=''){ph <- paste0(drain, '; ')} 
       
-      perm <- getVals(o, 'h_permeability', 'C_PERMEABILITY')
+      perm <- getValsAPI(o, 'h_permeability', 'C_PERMEABILITY')
       if(perm!=''){perm <- paste0(perm, '; ')} 
       
-      # sw <- getVals(o, 'h_soil_water_stat')
-      # sticky <- getVals(o, 'h_stickiness')
-      # repel <- getVals(o, 'h_water_repellence')
+      # sw <- getValsAPI(o, 'h_soil_water_stat')
+      # sticky <- getValsAPI(o, 'h_stickiness')
+      # repel <- getValsAPI(o, 'h_water_repellence')
       
-      cf_abun <- ifelse(length(o$z_coarse_frags)==0, '', getVals(obj = o$z_coarse_frags[[1]], attribute = 'cf_abun', domain = 'N_CF_ABUN'))
-      cf_dist<- ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_distribution', domain ='C_CF_DISTRIBUTION'))
-      cf_shape <- ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_shape', domain ='C_CF_SHAPE'))
-      cf_size <-  ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_size', domain ='N_CF_SIZE'))
-      cf_lith <-  ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_lith', domain ='C_LITHOLOGY'))
+      cf_abun <- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(obj = o$z_coarse_frags[[1]], attribute = 'cf_abun', domain = 'N_CF_ABUN'))
+      cf_dist<- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_distribution', domain ='C_CF_DISTRIBUTION'))
+      cf_shape <- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_shape', domain ='C_CF_SHAPE'))
+      cf_size <-  ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_size', domain ='N_CF_SIZE'))
+      cf_lith <-  ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_lith', domain ='C_LITHOLOGY'))
       
       cf <- paste0(cf_abun, ' ',cf_dist, ' ',cf_shape, ' ',cf_size, ' ',cf_lith )
       if (!grepl("^\\s*$", cf)){ ocf <- paste0(cf, ' coarse fragments; ')  }else {ocf<- ''}
       
-      seg_abun <- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_abun', domain = 'N_SEG_ABUN'))
-      seg_form<- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_form', domain = 'C_SEG_FORM'))
-      seg_nat <- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_nature', domain = 'C_SEG_NATURE'))
-      seg_size <- ifelse(length(o$z_segregations)==0, '',  getVals(o$z_segregations[[1]], 'seg_size', domain = 'N_SEG_SIZE'))
-      seg_strength <-  ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_strength', domain = 'C_SEG_STRENGTH'))
+      seg_abun <- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_abun', domain = 'N_SEG_ABUN'))
+      seg_form<- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_form', domain = 'C_SEG_FORM'))
+      seg_nat <- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_nature', domain = 'C_SEG_NATURE'))
+      seg_size <- ifelse(length(o$z_segregations)==0, '',  getValsAPI(o$z_segregations[[1]], 'seg_size', domain = 'N_SEG_SIZE'))
+      seg_strength <-  ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_strength', domain = 'C_SEG_STRENGTH'))
       
       seg <- paste0(seg_abun, ' ',seg_nat, ' ', seg_form, ' ', seg_size, ' ',seg_strength )
       if (!grepl("^\\s*$", seg)){ oseg <- paste0(seg, ' segregations; ')  }else {oseg<- ''}
       
-      mott_cont <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]],  'mott_contrast', domain = 'C_CONTRAST'))
-      mott_abun <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_abun', domain = 'N_MOTT_ABUN'))
-      mott_size<- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_size', domain = 'N_MOTT_SIZE'))
-      mott_col <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_hue_val_chrom', domain = 'C_MOTT_COLOUR'))
+      mott_cont <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]],  'mott_contrast', domain = 'C_CONTRAST'))
+      mott_abun <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_abun', domain = 'N_MOTT_ABUN'))
+      mott_size<- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_size', domain = 'N_MOTT_SIZE'))
+      mott_col <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_hue_val_chrom', domain = 'C_MOTT_COLOUR'))
       
       mot <- paste0(mott_cont, ' ', mott_abun, ' ',mott_size, ' ', mott_col )
       if (!grepl("^\\s*$", mot)){ omot <- paste0(mot, ' mottles; ')  }else {omot<- ''}
@@ -1113,23 +1148,23 @@ getSiteDataAPI <- function(jsnList){
   
   j <- jsnList
   s<- j[[1]]
-  agency <- getVals(s, 'agency_code')
-  proj <- getVals(s, 'proj_code')
-  s_id <- getVals(s, 's_id')
-  desc_by <- getVals(s, 'desc_by')
-  date <- getVals(s, 's_date_desc')
-  e_type <- getVals(s, 's_elem_type')
-  scale <- getVals(s, 's_map_scale')
-  map_sheet <- getVals(s, 's_map_sheet_no')
-  m_slope <- getVals(s, 's_modal_slope')
-  m_type <- getVals(s, 's_morph_type')
-  p_type <- getVals(s, 's_patt_type')
-  rel_ms <- getVals(s, 's_rel_ms_class')
-  relief <- getVals(s, 's_relief')
-  r_class <- getVals(s, 's_relief_class')
-  slope <- getVals(s, 's_slope')
-  s_class <- getVals(s, 's_slope_class')
-  s_eval <- getVals(s, 's_slope_eval')
+  agency <- getValsAPI(s, 'agency_code')
+  proj <- getValsAPI(s, 'proj_code')
+  s_id <- getValsAPI(s, 's_id')
+  desc_by <- getValsAPI(s, 'desc_by')
+  date <- getValsAPI(s, 's_date_desc')
+  e_type <- getValsAPI(s, 's_elem_type')
+  scale <- getValsAPI(s, 's_map_scale')
+  map_sheet <- getValsAPI(s, 's_map_sheet_no')
+  m_slope <- getValsAPI(s, 's_modal_slope')
+  m_type <- getValsAPI(s, 's_morph_type')
+  p_type <- getValsAPI(s, 's_patt_type')
+  rel_ms <- getValsAPI(s, 's_rel_ms_class')
+  relief <- getValsAPI(s, 's_relief')
+  r_class <- getValsAPI(s, 's_relief_class')
+  slope <- getValsAPI(s, 's_slope')
+  s_class <- getValsAPI(s, 's_slope_class')
+  s_eval <- getValsAPI(s, 's_slope_eval')
   
   odf <- data.frame(agency, proj, s_id, desc_by, date, e_type, scale, map_sheet,m_slope,m_type,p_type,rel_ms,
                     relief,r_class, slope, s_class, s_eval )
@@ -1142,26 +1177,26 @@ getObservationDataAPI <- function(jsnList){
   
   j <- jsnList
   o <- j[[1]]$z_observations[[1]]
-  otype <- getVals(o, 'o_type')
-  lat <- getVals(o, 'o_latitude_GDA94')
-  lon <- getVals(o, 'o_longitude_GDA94')
-  datum <- getVals(o, 'o_datum')
-  A_ord <- getVals(o, 'o_asc_ord')
-  A_sub <- getVals(o, 'o_asc_subord')
-  A_gg <- getVals(o, 'o_asc_gg')
-  A_subg <- getVals(o, 'o_asc_subg')
-  A_fam1 <- getVals(o, 'o_asc_fam1')
-  A_fam2 <- getVals(o, 'o_asc_fam2')
-  A_fam3 <- getVals(o, 'o_asc_fam3')
-  A_fam4 <- getVals(o, 'o_asc_fam4')
-  A_fam5 <- getVals(o, 'o_asc_fam5')
-  gsg <- getVals(o, 'o_gsg')
-  ppf <- getVals(o, 'o_ppf')
-  drain<- getVals(o, 'o_drainage')
-  perm <- getVals(o, 'o_permeability')
-  elev <- getVals(o, 'o_elevation')
-  elevT <- getVals(o, 'o_elevation_eval')
-  lith <- getVals(o, 'o_sb_lith')
+  otype <- getValsAPI(o, 'o_type')
+  lat <- getValsAPI(o, 'o_latitude_GDA94')
+  lon <- getValsAPI(o, 'o_longitude_GDA94')
+  datum <- getValsAPI(o, 'o_datum')
+  A_ord <- getValsAPI(o, 'o_asc_ord')
+  A_sub <- getValsAPI(o, 'o_asc_subord')
+  A_gg <- getValsAPI(o, 'o_asc_gg')
+  A_subg <- getValsAPI(o, 'o_asc_subg')
+  A_fam1 <- getValsAPI(o, 'o_asc_fam1')
+  A_fam2 <- getValsAPI(o, 'o_asc_fam2')
+  A_fam3 <- getValsAPI(o, 'o_asc_fam3')
+  A_fam4 <- getValsAPI(o, 'o_asc_fam4')
+  A_fam5 <- getValsAPI(o, 'o_asc_fam5')
+  gsg <- getValsAPI(o, 'o_gsg')
+  ppf <- getValsAPI(o, 'o_ppf')
+  drain<- getValsAPI(o, 'o_drainage')
+  perm <- getValsAPI(o, 'o_permeability')
+  elev <- getValsAPI(o, 'o_elevation')
+  elevT <- getValsAPI(o, 'o_elevation_eval')
+  lith <- getValsAPI(o, 'o_sb_lith')
   
   odf <- data.frame(otype, lat, lon, datum, A_ord, A_sub, A_gg, A_subg, A_fam1, A_fam2, A_fam3, A_fam4, A_fam5, gsg, ppf,
                     drain, perm, elev, elevT, lith)
@@ -1174,9 +1209,9 @@ getNotesAPI <- function(jsnList){
   
   j <- jsnList
   
-  siteNote <- as.character(getVals(j[[1]], 's_notes'))
-  ObsNote <-  as.character(getVals(j[[1]]$z_observations[[1]], 'o_notes'))
-  LocNote <-  as.character(getVals(j[[1]]$z_observations[[1]], 'o_location_notes'))
+  siteNote <- as.character(getValsAPI(j[[1]], 's_notes'))
+  ObsNote <-  as.character(getValsAPI(j[[1]]$z_observations[[1]], 'o_notes'))
+  LocNote <-  as.character(getValsAPI(j[[1]]$z_observations[[1]], 'o_location_notes'))
   
   nlist <- c(siteNote, ObsNote, LocNote)
   idxs <- which(nlist!='')
@@ -1201,54 +1236,54 @@ getHorizonDataAPI <- function(jsnList){
     for (i in 1:length(hors)) {
       
       o <- hors[[i]]
-      h_no <-  getVals(o, 'h_no')
-      ud <- getVals(o, 'h_depth_upper')
-      ld <- getVals(o, 'h_depth_lower')
-      hpref <- getVals(o, 'h_desig_num_pref')
-      hname <- getVals(o, 'h_desig_master')
-      hsubdiv <- getVals(o, 'h_desig_subdiv')
-      hnsuf <- getVals(o, 'h_desig_suffix')
-      dist <- getVals(o, 'h_bound_distinct')
-      shape <- getVals(o, 'h_bound_shape')
-      carb <- getVals(o, 'h_carbonate_eff')
-      disp <- getVals(o, 'h_dispersion')
-      texture <- getVals(o, 'h_texture')
-      texq <- getVals(o, 'h_texture_qual')
-      colour <- ifelse(length(o$z_colours)==0, '', getVals(o$z_colours[[1]], 'col_hue_val_chrom'))
-      colm <- ifelse(length(o$z_colours)==0, '', getVals(o$z_colours[[1]], 'col_moisture_stat_code'))
+      h_no <-  getValsAPI(o, 'h_no')
+      ud <- getValsAPI(o, 'h_depth_upper')
+      ld <- getValsAPI(o, 'h_depth_lower')
+      hpref <- getValsAPI(o, 'h_desig_num_pref')
+      hname <- getValsAPI(o, 'h_desig_master')
+      hsubdiv <- getValsAPI(o, 'h_desig_subdiv')
+      hnsuf <- getValsAPI(o, 'h_desig_suffix')
+      dist <- getValsAPI(o, 'h_bound_distinct')
+      shape <- getValsAPI(o, 'h_bound_shape')
+      carb <- getValsAPI(o, 'h_carbonate_eff')
+      disp <- getValsAPI(o, 'h_dispersion')
+      texture <- getValsAPI(o, 'h_texture')
+      texq <- getValsAPI(o, 'h_texture_qual')
+      colour <- ifelse(length(o$z_colours)==0, '', getValsAPI(o$z_colours[[1]], 'col_hue_val_chrom'))
+      colm <- ifelse(length(o$z_colours)==0, '', getValsAPI(o$z_colours[[1]], 'col_moisture_stat_code'))
       
-      drain <- getVals(o, 'h_drainage')
-      ec <- getVals(o, 'h_ec')
-      pH <- ifelse(length(o$Z_phs)==0, '', getVals(o$Z_phs[[1]], 'ph_value'))
-      perm <- getVals(o, 'h_permeability')
-      sw <- getVals(o, 'h_soil_water_stat')
-      sticky <- getVals(o, 'h_stickiness')
-      repel <- getVals(o, 'h_water_repellence')
+      drain <- getValsAPI(o, 'h_drainage')
+      ec <- getValsAPI(o, 'h_ec')
+      pH <- ifelse(length(o$Z_phs)==0, '', getValsAPI(o$Z_phs[[1]], 'ph_value'))
+      perm <- getValsAPI(o, 'h_permeability')
+      sw <- getValsAPI(o, 'h_soil_water_stat')
+      sticky <- getValsAPI(o, 'h_stickiness')
+      repel <- getValsAPI(o, 'h_water_repellence')
       
-      sGrade <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_grade'))
-      sSize <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_size'))
-      sType <- ifelse(length(o$z_structures)==0, '', getVals(o$z_structures[[1]], 'str_ped_type'))
+      sGrade <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_grade'))
+      sSize <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_size'))
+      sType <- ifelse(length(o$z_structures)==0, '', getValsAPI(o$z_structures[[1]], 'str_ped_type'))
       
-      cf_abun <- ifelse(length(o$z_coarse_frags)==0, '', getVals(obj = o$z_coarse_frags[[1]], attribute = 'cf_abun'))
-      cf_dist<- ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_distribution'))
-      cf_shape <- ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_shape'))
-      cf_size <-  ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_size'))
-      cf_lith <-  ifelse(length(o$z_coarse_frags)==0, '', getVals(o$z_coarse_frags[[1]], 'cf_lith'))
+      cf_abun <- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(obj = o$z_coarse_frags[[1]], attribute = 'cf_abun'))
+      cf_dist<- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_distribution'))
+      cf_shape <- ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_shape'))
+      cf_size <-  ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_size'))
+      cf_lith <-  ifelse(length(o$z_coarse_frags)==0, '', getValsAPI(o$z_coarse_frags[[1]], 'cf_lith'))
       
-      seg_abun <- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_abun'))
-      seg_form<- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_form'))
-      seg_nat <- ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_nature'))
-      seg_size <- ifelse(length(o$z_segregations)==0, '',  getVals(o$z_segregations[[1]], 'seg_size'))
-      seg_strength <-  ifelse(length(o$z_segregations)==0, '', getVals(o$z_segregations[[1]], 'seg_strength'))
+      seg_abun <- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_abun'))
+      seg_form<- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_form'))
+      seg_nat <- ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_nature'))
+      seg_size <- ifelse(length(o$z_segregations)==0, '',  getValsAPI(o$z_segregations[[1]], 'seg_size'))
+      seg_strength <-  ifelse(length(o$z_segregations)==0, '', getValsAPI(o$z_segregations[[1]], 'seg_strength'))
       
-      mott_abun <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_abun', domain = ))
-      mott_size<- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_size'))
-      mott_hvc <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_hue_val_chrom'))
-      mott_col <- ifelse(length(o$z_mottles)==0, '', getVals(o$z_mottles[[1]], 'mott_colour'))
+      mott_abun <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_abun', domain = ))
+      mott_size<- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_size'))
+      mott_hvc <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_hue_val_chrom'))
+      mott_col <- ifelse(length(o$z_mottles)==0, '', getValsAPI(o$z_mottles[[1]], 'mott_colour'))
       
       
       
-      # tdesc <- getVals(o, 'h_texture', 'C_H_TEXTURE')
+      # tdesc <- getValsAPI(o, 'h_texture', 'C_H_TEXTURE')
       rdf <- data.frame(h_no, ud, ld, hname=paste0(hpref, hname, hsubdiv, hnsuf), 
                         colour,colm, tex=paste0(texture, texq), sGrade, sSize, sType, drain, perm,
                         cf_abun, cf_dist, cf_shape, cf_size, cf_lith,
@@ -1295,8 +1330,8 @@ getLabDataAPI <- function(jsnList){
             
             for(k in 1:length(lr)){
               rec <- lr[[k]]
-              meth <- getVals(rec, 'labm_code')
-              v <- getVals(rec, 'labr_value')
+              meth <- getValsAPI(rec, 'labm_code')
+              v <- getValsAPI(rec, 'labr_value')
               rdf <- data.frame(SampleNo=sn, UD=ud, LD=ld, LabMCode=meth, Value=v )
               odf <- rbind(odf, rdf)
               # m[cnt, meth] <- v
@@ -1391,8 +1426,8 @@ getLabDataOld <- function(jsnList){
               
               for(k in 1:length(lr)){
                 rec <- lr[[k]]
-                meth <- getVals(rec, 'labm_code')
-                v <- getVals(rec, 'labr_value')
+                meth <- getValsAPI(rec, 'labm_code')
+                v <- getValsAPI(rec, 'labr_value')
                 m[cnt, meth] <- v
               }
             }
@@ -1506,7 +1541,7 @@ getSoilProfileDiagram <- function(sid, p){
       col='white'
     }
     rect(xleft = profleft, xright = profleft+profWidth, ybottom = rec$ld,   ytop = rec$ud, col=col)
-    text(lableft, rec$ld, rec$ld, cex = 1, font=1)
+    text(lableft, rec$ld, sprintf("%1.0f",rec$ld), cex = 1, font=1)
     
     
     ## Segregations 
@@ -1552,6 +1587,7 @@ getSoilProfileDiagram <- function(sid, p){
       mpercAbun = ap * 3
       print(mpercAbun)
       
+      mcol=NULL
       if(rec$p.mott_hvc !=''){
         mcol='black'
         hue <- str_sub(rec$p.mott_hvc, start = 1, end = nchar(rec$p.mott_hvc) - 2)
@@ -1580,9 +1616,11 @@ getSoilProfileDiagram <- function(sid, p){
         }
       }
       
-      rx <- runif( n=mpercAbun, min = profleft+marg, max= profleft+profWidth-marg)
-      ry <- runif(n=mpercAbun, min = rec$ud+marg, max= rec$ld-marg)
-      points(rx,ry,  pch = 15, col=mcol)
+      if(!is.null(mcol)){
+        rx <- runif( n=mpercAbun, min = profleft+marg, max= profleft+profWidth-marg)
+        ry <- runif(n=mpercAbun, min = rec$ud+marg, max= rec$ld-marg)
+        points(rx,ry,  pch = 15, col=mcol)
+      }
     }
     
     ## Horizon Name

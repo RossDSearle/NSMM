@@ -1,0 +1,19 @@
+LabCode,Type,Name,ReportName,Units,Digits
+4A1,Measured,pH of 1:5 soil/water suspension,pH 1:5 Water,,2
+4B2,Measured,pH of 1:5 soil/0.01M calcium chloride extract - following Method 4A1 (without stirring during measurement),pH CaCl2,,2
+3A1,Measured,Electrical Conductivity (EC) of 1:5 soil/water extract,EC 1:5 Water,(dS/m),2
+5A1,Measured,"Chloride - 1:5 soil/water extract, potentiometric titration",Chloride - 1:5 soil/water,(mg/kg),1
+6B2b,Measured,"Total organic carbon - Dumas high temperature combustion, infared/thermal conductivity (no soil pretreatment)",Organic Carbon,(%),2
+15A2_CEC,Calculated,Sum of Ex. cations + Ex. acidity - Sum of basic exch. cations,CEC,(cmol(+)/kg),2
+15A2_CA,Measured,"Exchangeable bases (Ca2+) - 1M ammonium chloride at pH 7.0, prewash for soluble salts",Exch Ca++,(cmol(+)/kg),2
+15A2_K,Measured,"Exchangeable bases (K+) - 1M ammonium chloride at pH 7.0, prewash  for soluble salts",Exch K++,(cmol(+)/kg),2
+15A2_MG,Measured,"Exchangeable bases (Mg2+) - 1M ammonium chloride at pH 7.0, prewash for soluble salts",Exch Mg++,(cmol(+)/kg),2
+15A2_NA,Measured,"Exchangeable bases (Na+) - 1M ammonium chloride at pH 7.0, prewash for soluble salts",Exch Na++,(cmol(+)/kg),2
+7A5,Measured,Total soil-N - Dumas high-temperature combustion,Total Nitrogen,(%),2
+15N1,Calculated,Exchangeable sodium percentage (ESP),ESP,(%),1
+8A1,Calculated,Total organic carbon/total nitrogen ratio,Carbon/Nitrogen Ratio,,1
+2Z2_Clay,Measured,Clay content,Clay content,(%),0
+2Z2_CS,Measured,Course sand content,Course sand content,(%),0
+2Z2_FS,Measured,Fine sand content,Fine sand content,(%),0
+2Z2_S,Measured,Sand content,Sand content,(%),0
+2Z2_Z,Measured,Silt content,Silt content,(%),0

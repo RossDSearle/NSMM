@@ -35,6 +35,9 @@ library(lubridate)
 library(xml2)
 library(munsell)
 library(shinycssloaders)
+library(flextable)
+library(DBI)
+library(officer)
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
@@ -63,9 +66,8 @@ source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
 source('Functions/Plotting.R')
-#source('Functions/NatSoilFunctions.R')
-
 source('Reporting/SoilInfoFunctions.R')
+source('Functions/DB.R')
 
 codes <<- read.csv('Resources/codes.csv')
 projects <<- read.csv('Resources/projects.csv')
@@ -75,6 +77,11 @@ labMethods <<- read.csv('Resources/labMethods.csv')
 largePhotoWidth = 650
 
 NatSoilAccessKey = ''
+
+localcon <- dbConnect(RSQLite::SQLite(), 'DB/TISM.db')
+
+useDB=T  ### use the local SQLite DB extracted from NatSoilProjects instead of the NatSoil API
+
 
 ### Get data from the API
 
@@ -342,18 +349,19 @@ server <- function(input, output, session) {
   
 #### GET Soil Info Data ####  
 
-  observeEvent(input$wgtGETDATA, {  
-    
-    useDB=T
-    
-    req(RV$CurrentSiteData)
+ # observeEvent(input$wgtGETDATA, {  
+  observe({
+    req(input$wgt_SMmain_SiteName)
     if(useDB){
-      con <- dbConnect(RSQLite::SQLite(), 'C:/Projects/NSMM/SoilDB/TISM.db')
-      si <- getSoilInfo(con = con, agencyCode = '994', projectCode = 'TISM', siteID = 'Lake Boga', obsID = 1)
+      si <- getSoilInfo(con = localcon, agencyCode = '994', projectCode = 'TISM', siteID = input$wgt_SMmain_SiteName, obsID = 1)
     }else{
-      si <- getSoilInfo(con = NULL, agencyCode = '199', projectCode = 'CAN', siteID = 'C113', obsID = 1)
+      #si <- getSoilInfo(con = NULL, agencyCode = '199', projectCode = 'CAN', siteID = 'C113', obsID = 1)
+      si <- getSoilInfo(con = NULL, agencyCode = '994', projectCode = 'TISM', siteID = input$wgt_SMmain_SiteName, obsID = 1)
     }
    
+    # siAPI <- si
+    # siAPI$Horizons
+    
    #RV$CurrentJSON <- jl
    RV$CurrentHorizons <- si$Horizons
    RV$CurrentLabResults <- si$LabResults
@@ -370,7 +378,7 @@ server <- function(input, output, session) {
   
   output$wgtProfile = renderPlot({
     req(RV$CurrentHorizons)
-    
+
     if(nrow(RV$CurrentHorizons) > 0){
       df <- RV$CurrentHorizons
       getSoilProfileDiagram('test', df)
@@ -384,14 +392,121 @@ server <- function(input, output, session) {
     RV$SiteDesc
   })
   
-  output$labResultsTable = renderRHandsontable({
+  output$wgtLabResultsLabel <- renderUI({
+    req(RV$CurrentLabResults)
+    if(is.null(RV$CurrentLabResults))
+    {
+      ltext <- HTML('')
+    }else{
+      ltext <- HTML('<H4>Soil Test Data</H4>')
+      shinyjs::show('wgtLabResultsLabel')
+    }
+    return(ltext)
+  })
+  
+  output$labResultsTable <-renderUI({
+    req(RV$CurrentLabResults)
     if(is.null(RV$CurrentLabResults))
     {
       df=data.frame()
     }else{
-      df <- RV$CurrentLabResults
+      df <- makeWideTableDB(RV$CurrentLabResults)
     }
-    rhandsontable(df,   manualColumnResize = T, readOnly = TRUE, rowHeaders = F) %>% hot_cols(fixedColumnsLeft = 3)
+    
+    labinfo <- read.csv('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Data/LabInfo.csv')
+    
+    df <- df[, -1]
+    colnames(df)[1:2] <- c('Upper Depth (cm)', 'Lower Depth (cm)')
+    
+    ### sort the columns to be the same as labinfo
+    sdf <- df[, 1:2]
+    for (i in 1:nrow(labinfo)) {
+      labrec <- labinfo[i,]
+      meth <- labrec$LabCode
+      idx <- which(colnames(df) == meth)
+      sdf <- cbind(sdf, df[idx])
+    }
+   
+    
+    
+    #  set significant figures  
+    stringLab <- sdf
+    
+    for (i in 3:ncol(sdf)) {
+      att <- colnames(sdf)[i]
+      dgt <- labinfo[labinfo$LabCode==att,]$Digits
+      for (j in 1:nrow(sdf)){
+        v <- sdf[j,i]
+        #q <- labsQ[j,i]
+        if(!is.na(v)){
+          vsig <-  sprintf(paste0("%.", dgt, "f"), round(as.numeric(v), digits = dgt))
+          # if(q){
+          #   vsig <- paste0('< ', vsig)
+          # }
+          stringLab[j,i] <- vsig
+        }
+      }
+    }
+    
+    ons <- colnames(stringLab[,-c(1:2)])
+    idxs <- match(ons, labinfo$LabCode)
+    newnames <- labinfo[idxs, ]$ReportName
+    colnames(stringLab) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
+    #colnames(labsN) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
+    
+    nms <- colnames(stringLab)[-c(1,2)]
+    unitNames <- vector(mode = 'character', length = length(nms))
+    
+    for (i in 1:length(nms)) {
+      att <- nms[i]
+      rec <- labinfo[labinfo$ReportName == att, ]
+      att <- rec$ReportName
+      unit <- rec$Units
+      unitNames[[i]] <- paste0(att, ' ', unit)
+    }
+      
+      
+    hlabs <- c('Upper Depth (cm)', 'Lower Depth (cm)', str_trim(unitNames))
+    # ft_lab <- set_header_labels(ft_lab, values = hlabs) %>%
+    #   
+    #   bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+    #   bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+    
+    
+    outer_border = fp_border(color="black", width = 1)
+    inner_border = fp_border(color="grey", width = 1)
+    padding <- 2
+    
+    ft_lab <- flextable(stringLab ) %>% fontsize( size = 10, part = 'all') %>% font( fontname = 'Calibri Light') %>% 
+      
+      set_header_labels(ft_lab, values = hlabs) %>%
+      
+      bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+      bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+      
+      flextable::border_inner( border = inner_border ) %>% 
+      flextable::border_outer( border = outer_border ) %>% 
+      flextable::padding(padding.top = padding, part = "all") %>%
+      flextable::padding(padding.bottom = padding, part = "all") %>%
+      flextable::padding(padding.left = padding, part = "all") %>%
+      flextable::padding(padding.right = padding, part = "all") %>%
+      
+      hrule(i = 1, rule = "exact", part = "header") %>%
+      bg(bg = "#FBE8BC", part = "header") %>%
+    
+    flextable::set_table_properties(  opts_word = list(repeat_headers = FALSE), align = 'left') %>%
+      flextable::width( j = c(1:ncol(stringLab)), width = 12, unit = "mm") %>%
+      flextable::height(height = 45, part = "header", unit = 'mm') %>%
+      flextable::valign(part = "header", valign = 'bottom') %>%
+      flextable::align(align = "center", part = "header") %>%
+      flextable::align(align = "center", part = "body") %>%
+      flextable::rotate(part = "header", rotation = "btlr")  %>%
+      
+      flextable::add_footer_lines("See notes at the end of this document for method details.") %>%
+      flextable::fontsize(size = 8, part = "footer")
+    #rhandsontable(df,   manualColumnResize = T, readOnly = TRUE, rowHeaders = F) %>% hot_cols(fixedColumnsLeft = 3)
+    htmltools_value(ft_lab)
+  
   })
   
   
@@ -399,7 +514,9 @@ server <- function(input, output, session) {
   #### Render Lab Data Plots  #######
   output$plots <- renderUI({
     
-    wt <-  RV$CurrentLabResults
+    labdata <-  RV$CurrentLabResults
+    
+    wt <- makeWideTableDB(labdata)
     
     colnames(wt)
     
@@ -414,7 +531,7 @@ server <- function(input, output, session) {
     cnt=0
     for (i in 1:np) {
       cnt=cnt+1
-      b64 <-  plotLabData(df=wt,i)
+      b64 <-  plotLabDataDB(df=wt,i)
       html <- paste0(html, '<td><img src="data:image/png;base64,', b64, '" 
           width="', 250, '" 
           height="', 300, '"></td>')

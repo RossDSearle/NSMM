@@ -3,6 +3,7 @@ library(DBI)
 library(stringr)
 
 source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Functions/DB.R')
+source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Admin/DBMakeSQLiteNatSoilDB.R')
 
 labName <- 'C:/Projects/NSMM/LabData/Import_1/CSBP_Lab_260521_Brendan Malone_001_batch_1.xlsx'
 getSheetNames(labName)
@@ -84,7 +85,7 @@ sitesInLab <- na.omit(unique(sapply(bits, function (x) x[1])))
                       v1 <- str_trim(str_remove(labval, '<'))
                       labval <- as.numeric(v1)/2
                     }else{
-                      labval <- as.numeric(v1)
+                      labval <- as.numeric(labval)
                     }
                     
                     
@@ -105,7 +106,7 @@ sitesInLab <- na.omit(unique(sapply(bits, function (x) x[1])))
 
 ###### create the portable DB
 con <- getNatSoilProjectsCon()
-outDB <- 'C:/Projects/NSMM/SoilDB/TISM.db'
+outDB <- 'C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/DB/TISM.db'
 DBpath <- makeSQLiteNatSoilDB(con=con, populateData = T, projCode =  'TISM')
 if(file.exists(DBpath)){
   file.copy(DBpath, outDB)

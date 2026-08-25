@@ -26,12 +26,18 @@ Tab2_UI <- function() {
                                      ##### Site Description Tab  ####                            
                                      tabPanel("Soil Description", 
                                               htmlOutput('wgtSiteDescription'),
-                                             ),
-                                     
-                                     ##### Site Data Sheet View Tab  ####   
-                                     tabPanel("Soil Test Data",
+                                              
+                                              HTML('<BR><BR>'),
                                               htmlOutput("wgtLabResultsLabel"),
-                                              rHandsontableOutput('labResultsTable' )),
+                                              #rHandsontableOutput('labResultsTable' )),
+                                              uiOutput('labResultsTable')),
+                                             
+                                     
+                                     # ##### Site Data Sheet View Tab  ####   
+                                     # tabPanel("Soil Test Data",
+                                     #          htmlOutput("wgtLabResultsLabel"),
+                                     #          #rHandsontableOutput('labResultsTable' )),
+                                     # uiOutput('labResultsTable')),
  
                                      ##### Lab Data Plots Tab  #### 
                                      tabPanel("Lab Data Plots", fluidRow(uiOutput('plots'))),
