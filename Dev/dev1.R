@@ -69,6 +69,12 @@ mmperpv <-  ((calibs$DrainedUpperLimit - calibs$LowerLimit)/100) / pbrange
 
 
 
+input <- list()
+localcon <- dbConnect(RSQLite::SQLite(), 'DB/TISM.db')
+agencyCode = '994'
+projectCode = 'TISM'
+input$wgt_SMmain_SiteName <- 'Nyah'
+obsID = 1
 
 
 

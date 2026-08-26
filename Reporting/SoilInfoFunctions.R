@@ -202,7 +202,7 @@ html <- paste0('<BR><table>
                    <col span="1" style="width: 500px;">
                    <col span="1" style="width: 500px;">
                 </colgroup><tbody>
-                 <tr><td><b>Profile ID: </b>', siteID, '</td>')
+                 <tr><td><b>Profile ID: </b> <span style="color: #0A20A8; ; font-size: 18px; font-weight: bold;">', siteID, '</span></td>')
 
 ol$AgencyCode <- paste0( agencyC)
 ol$ProjectCode <- paste0( projC)
@@ -1703,5 +1703,117 @@ plotLabDataAPI <- function(df, i){
 
 
 
+makeLabDataTable <- function(labdata, labinfo){
+  
+  if(is.null(labdata))
+  {
+    df=data.frame()
+  }else{
+    df <- makeWideTableDB(labdata)
+  }
+  
+  
+  
+  df <- df[, -1]
+  colnames(df)[1:2] <- c('Upper Depth (cm)', 'Lower Depth (cm)')
+  
+  ### sort the columns to be the same as labinfo
+  sdf <- df[, 1:2]
+  for (i in 1:nrow(labinfo)) {
+    labrec <- labinfo[i,]
+    meth <- labrec$LabCode
+    idx <- which(colnames(df) == meth)
+    sdf <- cbind(sdf, df[idx])
+  }
+  
+  
+  
+  #  set significant figures  
+  stringLab <- sdf
+  
+  for (i in 3:ncol(sdf)) {
+    att <- colnames(sdf)[i]
+    dgt <- labinfo[labinfo$LabCode==att,]$Digits
+    for (j in 1:nrow(sdf)){
+      v <- sdf[j,i]
+      #q <- labsQ[j,i]
+      if(!is.na(v)){
+        vsig <-  sprintf(paste0("%.", dgt, "f"), round(as.numeric(v), digits = dgt))
+        # if(q){
+        #   vsig <- paste0('< ', vsig)
+        # }
+        stringLab[j,i] <- vsig
+      }
+    }
+  }
+  
+  ons <- colnames(stringLab[,-c(1:2)])
+  idxs <- match(ons, labinfo$LabCode)
+  newnames <- labinfo[idxs, ]$ReportName
+  colnames(stringLab) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
+  #colnames(labsN) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
+  
+  nms <- colnames(stringLab)[-c(1,2)]
+  unitNames <- vector(mode = 'character', length = length(nms))
+  
+  for (i in 1:length(nms)) {
+    att <- nms[i]
+    rec <- labinfo[labinfo$ReportName == att, ]
+    att <- rec$ReportName
+    unit <- rec$Units
+    unitNames[[i]] <- paste0(att, ' ', unit)
+  }
+  
+  
+  hlabs <- c('Upper Depth (cm)', 'Lower Depth (cm)', str_trim(unitNames))
+  # ft_lab <- set_header_labels(ft_lab, values = hlabs) %>%
+  #   
+  #   bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+  #   bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+  
+  
+  outer_border = fp_border(color="black", width = 1)
+  inner_border = fp_border(color="grey", width = 1)
+  padding <- 2
+  
+  ft_lab <- flextable(stringLab ) %>% fontsize( size = 10, part = 'all') %>% font( fontname = 'Calibri Light') %>% 
+    
+    set_header_labels(ft_lab, values = hlabs) %>%
+    
+    bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+    bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
+    
+    flextable::border_inner( border = inner_border ) %>% 
+    flextable::border_outer( border = outer_border ) %>% 
+    flextable::padding(padding.top = padding, part = "all") %>%
+    flextable::padding(padding.bottom = padding, part = "all") %>%
+    flextable::padding(padding.left = padding, part = "all") %>%
+    flextable::padding(padding.right = padding, part = "all") %>%
+    
+    hrule(i = 1, rule = "exact", part = "header") %>%
+    bg(bg = "#FBE8BC", part = "header") %>%
+    
+    flextable::set_table_properties(  opts_word = list(repeat_headers = FALSE), align = 'left') %>%
+    flextable::width( j = c(1:ncol(stringLab)), width = 12, unit = "mm") %>%
+    flextable::height(height = 45, part = "header", unit = 'mm') %>%
+    flextable::valign(part = "header", valign = 'bottom') %>%
+    flextable::align(align = "center", part = "header") %>%
+    flextable::align(align = "center", part = "body") %>%
+    flextable::rotate(part = "header", rotation = "btlr")  %>%
+    
 
+    flextable::add_footer_lines(values = as_paragraph(
+      "For more details about the lab analysis go to the CSBP ", 
+      hyperlink_text(x = "website", url = "https://csbplab.com.au/tests/soil")
+    )) %>%
+    
+    #flextable::add_footer_lines(  "See notes at the end of this document for method details.") %>%
+    flextable::fontsize(size = 8, part = "footer")
+  
+  
+  
+  
+  return(ft_lab)
+  
+}
 

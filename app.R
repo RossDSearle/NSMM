@@ -52,6 +52,7 @@ if (machineName=='landscapes-soils') {
   #APIUrl <<- 'http://203.101.224.137:8071/SensorAPI'
   setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM')
   PhotoRoot <- 'C:/Projects/NSMM/Photos/AppPhotoLibrary'
+ 
   }
 
 
@@ -73,6 +74,7 @@ codes <<- read.csv('Resources/codes.csv')
 projects <<- read.csv('Resources/projects.csv')
 agencies <<- read.csv('Resources/agencies.csv')
 labMethods <<- read.csv('Resources/labMethods.csv')
+labinfo <<- read.csv('Data/LabInfo.csv')
 
 largePhotoWidth = 650
 
@@ -262,27 +264,32 @@ server <- function(input, output, session) {
             b64img <-  base64enc::base64encode(f)
             
             ext <- tools::file_ext(f)
-            # if(ext=='jpg'){
-               img <- jpeg::readJPEG(f)
+            img <- jpeg::readJPEG(f)
                d <- dim(img)
-            # } else if(ext=='png'){
-              # img <- png::readPNG(f)
-              # d <- dim(img)
-           # }else{}
+               
+               img <- image_read(fls[i])
+               info <- image_info(img)
             
-            m <- max(d[1], d[2])
-            prop <- imgSize/m
-            w = ceiling(d[2] * prop )
-            h = ceiling(d[1] * prop )
+            # m <- max(d[1], d[2])
+            # prop <- imgSize/m
+            # w = ceiling(d[2] * prop )
+            # h = ceiling(d[1] * prop )
             
             n <- stringr::str_split(basename(f), pattern = '[.]')[[1]][1]
             n <- stringr::str_replace(n, 'Thumbnail_', '')
             imgName <- paste0(n)
+            # 
+            # if(info$width > info$height){
+            #   imgSz <- 'height=100 ' 
+            # }else{
+            #   
+            #   imgSz <- 'width=200 ' 
+            # }
             
-            
+            imgSz=''
            
-            imgData <- paste0('<img class="example-image" style="border: 15px solid white;"  src="data:image/png;base64,', b64img, '" alt="image-1", 
-                              width=', w, ', height=', h, ' style="cursor: pointer;" 
+            imgData <- paste0('<img class="example-image" style="border: 15px solid white;"  src="data:image/png;base64,', b64img, '" alt="image-1", ', 
+                              imgSz, ', style="cursor: pointer;" 
                               onclick="Shiny.setInputValue(&quot;image_clicked&quot;, &quot;', basename(f) , '&quot;, {priority: &quot;event&quot;})" /><p>
                               <b>',imgName, '</b></a></p>' )
             print(imgData)
@@ -398,122 +405,33 @@ server <- function(input, output, session) {
     {
       ltext <- HTML('')
     }else{
+      if(nrow(RV$CurrentLabResults)>0){
       ltext <- HTML('<H4>Soil Test Data</H4>')
       shinyjs::show('wgtLabResultsLabel')
+      }else{
+        ltext <- HTML('')
+      }
     }
     return(ltext)
   })
   
   output$labResultsTable <-renderUI({
     req(RV$CurrentLabResults)
-    if(is.null(RV$CurrentLabResults))
-    {
-      df=data.frame()
+    if(nrow(RV$CurrentLabResults)>0){
+      ft_lab <- makeLabDataTable(labdata=RV$CurrentLabResults, labinfo=labinfo)
+      return(htmltools_value(ft_lab))
     }else{
-      df <- makeWideTableDB(RV$CurrentLabResults)
+      return(NULL)
     }
-    
-    labinfo <- read.csv('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Data/LabInfo.csv')
-    
-    df <- df[, -1]
-    colnames(df)[1:2] <- c('Upper Depth (cm)', 'Lower Depth (cm)')
-    
-    ### sort the columns to be the same as labinfo
-    sdf <- df[, 1:2]
-    for (i in 1:nrow(labinfo)) {
-      labrec <- labinfo[i,]
-      meth <- labrec$LabCode
-      idx <- which(colnames(df) == meth)
-      sdf <- cbind(sdf, df[idx])
-    }
-   
-    
-    
-    #  set significant figures  
-    stringLab <- sdf
-    
-    for (i in 3:ncol(sdf)) {
-      att <- colnames(sdf)[i]
-      dgt <- labinfo[labinfo$LabCode==att,]$Digits
-      for (j in 1:nrow(sdf)){
-        v <- sdf[j,i]
-        #q <- labsQ[j,i]
-        if(!is.na(v)){
-          vsig <-  sprintf(paste0("%.", dgt, "f"), round(as.numeric(v), digits = dgt))
-          # if(q){
-          #   vsig <- paste0('< ', vsig)
-          # }
-          stringLab[j,i] <- vsig
-        }
-      }
-    }
-    
-    ons <- colnames(stringLab[,-c(1:2)])
-    idxs <- match(ons, labinfo$LabCode)
-    newnames <- labinfo[idxs, ]$ReportName
-    colnames(stringLab) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
-    #colnames(labsN) <- c('Upper Depth (cm)', 'Lower Depth (cm)', newnames)
-    
-    nms <- colnames(stringLab)[-c(1,2)]
-    unitNames <- vector(mode = 'character', length = length(nms))
-    
-    for (i in 1:length(nms)) {
-      att <- nms[i]
-      rec <- labinfo[labinfo$ReportName == att, ]
-      att <- rec$ReportName
-      unit <- rec$Units
-      unitNames[[i]] <- paste0(att, ' ', unit)
-    }
-      
-      
-    hlabs <- c('Upper Depth (cm)', 'Lower Depth (cm)', str_trim(unitNames))
-    # ft_lab <- set_header_labels(ft_lab, values = hlabs) %>%
-    #   
-    #   bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
-    #   bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
-    
-    
-    outer_border = fp_border(color="black", width = 1)
-    inner_border = fp_border(color="grey", width = 1)
-    padding <- 2
-    
-    ft_lab <- flextable(stringLab ) %>% fontsize( size = 10, part = 'all') %>% font( fontname = 'Calibri Light') %>% 
-      
-      set_header_labels(ft_lab, values = hlabs) %>%
-      
-      bg(j =  'Upper Depth (cm)', bg ='#E6E4E3', part = "body") %>%
-      bg(j =  'Lower Depth (cm)', bg ='#E6E4E3', part = "body") %>%
-      
-      flextable::border_inner( border = inner_border ) %>% 
-      flextable::border_outer( border = outer_border ) %>% 
-      flextable::padding(padding.top = padding, part = "all") %>%
-      flextable::padding(padding.bottom = padding, part = "all") %>%
-      flextable::padding(padding.left = padding, part = "all") %>%
-      flextable::padding(padding.right = padding, part = "all") %>%
-      
-      hrule(i = 1, rule = "exact", part = "header") %>%
-      bg(bg = "#FBE8BC", part = "header") %>%
-    
-    flextable::set_table_properties(  opts_word = list(repeat_headers = FALSE), align = 'left') %>%
-      flextable::width( j = c(1:ncol(stringLab)), width = 12, unit = "mm") %>%
-      flextable::height(height = 45, part = "header", unit = 'mm') %>%
-      flextable::valign(part = "header", valign = 'bottom') %>%
-      flextable::align(align = "center", part = "header") %>%
-      flextable::align(align = "center", part = "body") %>%
-      flextable::rotate(part = "header", rotation = "btlr")  %>%
-      
-      flextable::add_footer_lines("See notes at the end of this document for method details.") %>%
-      flextable::fontsize(size = 8, part = "footer")
-    #rhandsontable(df,   manualColumnResize = T, readOnly = TRUE, rowHeaders = F) %>% hot_cols(fixedColumnsLeft = 3)
-    htmltools_value(ft_lab)
-  
   })
   
   
   
   #### Render Lab Data Plots  #######
   output$plots <- renderUI({
+    req(RV$CurrentLabResults)
     
+    if(nrow(RV$CurrentLabResults)>0){
     labdata <-  RV$CurrentLabResults
     
     wt <- makeWideTableDB(labdata)
@@ -544,7 +462,10 @@ server <- function(input, output, session) {
     
     html <- paste0(html, '</tr></table')
     
-    HTML(html)
+    return(HTML(html))
+    }else{
+      return('')
+    }
     
     
   })
@@ -1092,41 +1013,41 @@ server <- function(input, output, session) {
      updateSelectInput(session, inputId = 'wgt_SiteInformation_PhotoDescription', choices = namelst)
    })
    
-   output$WgtSiteInfoTab_SoilSiteImage <- renderUI({
-     
-     req( input$wgt_SiteInformation_PhotoDescription, RV$CurrentSitePhotos) 
-     
-   #  photoNum <- str_split( input$wgt_SiteInformation_PhotoDescription, ' : ')[[1]][1]
-     photoNum <- input$wgt_SiteInformation_PhotoDescription
-     df <- BE$Shared$Queries$doSelectQuery(paste0("select * from images where photoNum = ", photoNum))
-     
-     if(nrow(df)>0){
-     html <- ''
- #    for (i in 1:nrow(df)) {
-       rec <- df[1,]
-       
-       if(rec$URL != ''){
-         html <- paste0(html, '<img src="', rec$URL, '" 
-          height="', 600, '"<BR><BR>')
-       }else{
-         m <- max(rec$width, rec$height)
-         prop <- 600/m
-         w = ceiling(rec$width * prop )
-         h = ceiling(rec$height * prop )
-         
-         html <- paste0(html, '<img src="data:image/png;base64,', rec$b64ImageData, '" 
-          width="', w, '" 
-          height="', h, '"<BR><BR>')
-       }
-       
-  #   }
-     HTML(paste0(html) )
-     }else{
-       HTML('<h2>No Images available for this Site</h2>' )
-     }
-     
-   })
-   
+ #   output$WgtSiteInfoTab_SoilSiteImage <- renderUI({
+ #     
+ #     req( input$wgt_SiteInformation_PhotoDescription, RV$CurrentSitePhotos) 
+ #     
+ #   #  photoNum <- str_split( input$wgt_SiteInformation_PhotoDescription, ' : ')[[1]][1]
+ #     photoNum <- input$wgt_SiteInformation_PhotoDescription
+ #     df <- BE$Shared$Queries$doSelectQuery(paste0("select * from images where photoNum = ", photoNum))
+ #     
+ #     if(nrow(df)>0){
+ #     html <- ''
+ # #    for (i in 1:nrow(df)) {
+ #       rec <- df[1,]
+ #       
+ #       if(rec$URL != ''){
+ #         html <- paste0(html, '<img src="', rec$URL, '" 
+ #          height="', 600, '"<BR><BR>')
+ #       }else{
+ #         m <- max(rec$width, rec$height)
+ #         prop <- 600/m
+ #         w = ceiling(rec$width * prop )
+ #         h = ceiling(rec$height * prop )
+ #         
+ #         html <- paste0(html, '<img src="data:image/png;base64,', rec$b64ImageData, '" 
+ #          width="', w, '" 
+ #          height="', h, '"<BR><BR>')
+ #       }
+ #       
+ #  #   }
+ #     HTML(paste0(html) )
+ #     }else{
+ #       HTML('<h2>No Images available for this Site</h2>' )
+ #     }
+ #     
+ #   })
+ #   
    
    
 ###. ####   
