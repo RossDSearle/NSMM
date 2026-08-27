@@ -103,6 +103,8 @@ getGlobalData <- function(){
 getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL, fill.gaps=T, do.trim=T){
   # what options are silo, volumetric, globals
   
+  
+  print(paste0(tempdir(), '/NSMMDataCache'))
  # grab data from the daily cache if it exists
   if(is.null(user)){
     datacache <- paste0(tempdir(), '/NSMMDataCache')
@@ -131,7 +133,7 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
   }else{
     
     if(what=='silo'){
-      url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM')
+      url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM&&startdate=19600101')
       data <- queryAPI(EP = url )
       if(class(data)!='list'){
         return(NULL)
