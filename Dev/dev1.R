@@ -18,6 +18,11 @@ RV$AccessKey = ''
 
 RV$CurrentSiteData <- getAllSiteData(Network=Network, SiteName = SiteName)
 
+
+sd <- getAllSiteData(user=NULL, Network = Network, SiteName = SiteName, Email='ross.searle@gmail.com', makeTS = T)
+RV$CurrentSiteData <- sd
+
+
 session <- list()
 session$token <- '1234567890'
 

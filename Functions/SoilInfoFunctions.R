@@ -202,7 +202,7 @@ html <- paste0('<BR><table>
                    <col span="1" style="width: 500px;">
                    <col span="1" style="width: 500px;">
                 </colgroup><tbody>
-                 <tr><td><b>Profile ID: </b> <span style="color: #0A20A8; ; font-size: 18px; font-weight: bold;">', siteID, '</span></td>')
+                 <tr><td><b>Profile ID: </b> <span style="color: #0A20A8; font-weight: bold;">', siteID, '</span></td>')
 
 ol$AgencyCode <- paste0( agencyC)
 ol$ProjectCode <- paste0( projC)

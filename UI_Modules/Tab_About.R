@@ -13,11 +13,11 @@ includeHTML2 <- function (path) {
 
 
 
-Tab3_UI <- function() {
+Tab_UI_About <- function() {
   
   ns <- NS('Tab3')
   
-  tabPanel("About",  icon = icon("circle-info", tags$style()),
+  tabPanel("About",  icon = icon("circle-info"),
            HTML('<div style="margin-left: 20px; ">'),
            
            tabPanel("About", "",

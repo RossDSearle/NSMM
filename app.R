@@ -38,6 +38,14 @@ library(shinycssloaders)
 library(flextable)
 library(DBI)
 library(officer)
+library(magick)
+
+library(xts)
+library(data.table)
+library(ggplot2)
+library(scales)
+library(weatherOz)
+
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
@@ -61,14 +69,17 @@ source('Functions/Helpers.R')
 source('Secrets/configs.R')
 source('Styles/headerLayout.R')
 source('UI_Modules/Tab_SoilMoistureMain.R')
-source('UI_Modules/Tab_SiteInformation.R')
-source('UI_Modules/Tab_SMIPS.R')
+source('UI_Modules/Tab_SoilInformation.R')
+source('UI_Modules/Tab_Photos.R')
+source('UI_Modules/Tab_Climate.R')
+#source('UI_Modules/Tab_SMIPS.R')
 source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
 source('Functions/Plotting.R')
-source('Reporting/SoilInfoFunctions.R')
+source('Functions/SoilInfoFunctions.R')
 source('Functions/DB.R')
+source('Functions/climate.R')
 
 codes <<- read.csv('Resources/codes.csv')
 projects <<- read.csv('Resources/projects.csv')
@@ -106,12 +117,15 @@ glbCalibrationInfo <<- gd$CalibrationInfo
 rainChartMaxYVal = 30
 
 
+
 ####.  #####
 #### _______ UI CODE ____________  #########
 ####.  #####
 
 ui <- fluidPage(
   
+  
+ 
   
   tags$head(
     tags$style(HTML("
@@ -190,19 +204,103 @@ ui <- fluidPage(
   useShinyjs(),
   cookie_dependency(),
   
-  navbarPage("", id = "mainTabset", 
+  #theme = shinythemes::shinytheme("flatly"),
+  #tags$style( 'bootstrap.css')
+  #tags$link(rel = "stylesheet", type = "text/css", href = "Styles/csiro.css"),
+  tags$style(".nav-tabs {
+  background-color: #19291D;
+    }
 
-            theme = shinythemes::shinytheme("flatly"),
-            
-            Tab1_UI(),
-            Tab2_UI(),
-         #   Tab4_UI(),
-            Tab3_UI(),
-            Tab_Admin_UI(),
-  )
-                      
+.nav-tabs-custom .nav-tabs li.active:hover a, .nav-tabs-custom .nav-tabs li.active a {
+background-color: transparent;
+border-color: transparent;
+}
+
+.nav-tabs > li > a {
+        color: #FFFFFF !important; 
+      }
+
+.nav-tabs-custom .nav-tabs li.active {
+    border-top-color: #FFF;
+}"),
+  
+  sidebarLayout(
+    
+    sidebarPanel(width = 3,
+      actionLink("toggleBtn", "User Settings"),
+      
+      # Sliding Panel for managing persistant settings
+      div(id = "slidePanel",
+          h4("User Settings"),
+          hr(),
+          
+          br(),
+          br(),
+          # Default Sensor Site
+          selectInput("wgt_settings_default_Network", "Default Network :", choices = paste0(glbSites$network)),
+          selectInput("wgt_settings_default_site", "Default Site :", choices = NULL),
+          br(),
+          # Email Input
+          textInput("wgt_settings_user_email", "Email Address:", placeholder = "name@example.com"),
+          p(tags$div(style="font-size: 11px;",'Your email address is required by SILO to supply the weather data. 
+                   It is not saved on our systems but rather stored as a cookie on your device. 
+                   If your chose not to supply your email address to SILO you will not have access to weather data in this website.')),
+          
+          # Trim And fill TS
+          br(),
+          checkboxInput("wgt_settings_tidyTS", "Tidy up timeseries"),
+          p(tags$div(style="font-size: 11px;",'Trim NA data from the start and end of timeseries data as well as fill missing data (linear interpolation) within a timeseries.')),
+          br(),
+          actionButton("wgt_settings_save", "Save", class = "btn-primary"),
+          actionButton("wgt_settings_cancel", "Cancel", class = "btn-primary")
+      ),
+      
+      HTML('<BR>'),
+      HTML('<BR>'),
+      HTML('Click on a location in the map to view soil moisture data'),
+      leafletOutput("wgt_SMmain_ProbeLocationeMap", width = '100%', height = 400),
+      
+      HTML('<BR>'),
+      selectInput("wgt_SMmain_Network", "Network", choices=glbNetworks$network[2], width = 350, selected='NSMM'),
+      selectInput("wgt_SMmain_SiteName", "Site", choices=NULL, width = 350),
+      
+      # actionLink('wgt_SaveCookie', 'Save as default site'),
+      # HTML('<BR><BR>'),
+      
+      # helpText("Select date below"), 
+      # sliderInput("datePker", "Dates:", min = as.Date("2025-01-01","%Y-%m-%d"), max = Sys.Date()-5, value=Sys.Date()-5, timeFormat="%Y-%m-%d",
+      #             animate = animationOptions(interval = 300, loop = TRUE)),
+      
+      HTML('<BR><BR><BR><BR><BR><BR>')
+    
+    
+     
+      
+    ),
+    
+    
+    mainPanel(
+
+      tabsetPanel( 
+
+        id = "main_tabs",
+        
+        selected = "Climate",
+        
+        Tab_UI_SoilMoisture(),
+        Tab_UI_SoilInformation(),
+        Tab_UI_Climate(),
+        Tab_UI_Photos(),
+
+        Tab_UI_About(),
+        #Tab_Admin_UI()
+
+)
 )
 
+)
+
+)
 
 ####_______   SERVER CODE  ________   #########################################
 server <- function(input, output, session) {
@@ -248,8 +346,7 @@ server <- function(input, output, session) {
       
       td <- tempdir()
       
-      html <- paste0('<BR><BR><p2 style="color: blue;">Click on the photo to enlarge view.</p2><table id="photosTable">')
-      # html <- paste0('<BR><BR><table id="photosTable">')
+      html <- paste0('<p2 style="color: blue;"><BR><BR>Click on the photo to enlarge view.</p2><table id="photosTable">')
       
       
       cnt=1
@@ -267,24 +364,12 @@ server <- function(input, output, session) {
             img <- jpeg::readJPEG(f)
                d <- dim(img)
                
-               img <- image_read(fls[i])
+               img <- image_read(photos[i])
                info <- image_info(img)
-            
-            # m <- max(d[1], d[2])
-            # prop <- imgSize/m
-            # w = ceiling(d[2] * prop )
-            # h = ceiling(d[1] * prop )
             
             n <- stringr::str_split(basename(f), pattern = '[.]')[[1]][1]
             n <- stringr::str_replace(n, 'Thumbnail_', '')
             imgName <- paste0(n)
-            # 
-            # if(info$width > info$height){
-            #   imgSz <- 'height=100 ' 
-            # }else{
-            #   
-            #   imgSz <- 'width=200 ' 
-            # }
             
             imgSz=''
            
@@ -292,7 +377,6 @@ server <- function(input, output, session) {
                               imgSz, ', style="cursor: pointer;" 
                               onclick="Shiny.setInputValue(&quot;image_clicked&quot;, &quot;', basename(f) , '&quot;, {priority: &quot;event&quot;})" /><p>
                               <b>',imgName, '</b></a></p>' )
-            print(imgData)
             
             cd <- paste0( '<td>', imgData, '</td>')
             
@@ -425,7 +509,17 @@ server <- function(input, output, session) {
     }
   })
   
+
   
+  #### Render Climate Info Page  #######
+  output$wgtClimateInfoPageHTML <- renderUI({
+    req(RV$CurrentSiteData)
+    print(RV$CurrentSiteData)
+    chtml <- makeClimatePageHTML(CurrentSiteData = RV$CurrentSiteData)
+    HTML(chtml)
+  })
+  
+    
   
   #### Render Lab Data Plots  #######
   output$plots <- renderUI({
@@ -451,8 +545,8 @@ server <- function(input, output, session) {
       cnt=cnt+1
       b64 <-  plotLabDataDB(df=wt,i)
       html <- paste0(html, '<td><img src="data:image/png;base64,', b64, '" 
-          width="', 250, '" 
-          height="', 300, '"></td>')
+          width="', 800, '" 
+          height="', 400, '"></td>')
       
       if(cnt==4){
         html <- paste0(html, '</tr><tr>')
