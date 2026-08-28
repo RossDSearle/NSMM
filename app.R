@@ -73,6 +73,8 @@ source('UI_Modules/Tab_SoilInformation.R')
 source('UI_Modules/Tab_Photos.R')
 source('UI_Modules/Tab_Climate.R')
 #source('UI_Modules/Tab_SMIPS.R')
+
+source('UI_Modules/Tab_Downloads.R')
 source('UI_Modules/Tab_About.R')
 source('UI_Modules/Tab_Admin.R')
 source('Server_Modules/Server_AdminTab.R')
@@ -174,7 +176,18 @@ ui <- fluidPage(
   
   }
          
-      "))
+      ")),
+    tags$style(HTML("
+      /* Change text color for all tab links */
+      .tabbable > .nav > li > a {
+        color: white; 
+      }
+      
+      /* Change text color for the active/selected tab */
+      .tabbable > .nav > li.active > a {
+        color: darkgreen !important;
+      }
+    "))
     
     ),
   
@@ -285,12 +298,13 @@ border-color: transparent;
 
         id = "main_tabs",
         
-        selected = "Climate",
+        #selected = "Climate",
         
         Tab_UI_SoilMoisture(),
         Tab_UI_SoilInformation(),
         Tab_UI_Climate(),
         Tab_UI_Photos(),
+        Tab_UI_Downloads(),
 
         Tab_UI_About(),
         #Tab_Admin_UI()
@@ -1142,6 +1156,32 @@ server <- function(input, output, session) {
  #     
  #   })
  #   
+   
+
+   
+   ###. ####   
+   ### ^ -----  Downloads Tab  ------ ####  
+
+   ### ^^ Download volumetric SM  #### 
+  
+   
+   
+   output$downloadData_VolSM <- downloadHandler(
+     filename = function() {
+       paste("data-", Sys.Date(), ".csv", sep = "")
+     },
+     content = function(file) {
+       ts <- RV$CurrentSiteData$TS$volumetric_mmPermm
+       df_daily <- data.frame(date = index(ts), value = coredata(ts), row.names = NULL)
+       write.csv(df_daily, file, row.names = FALSE)
+     }
+   )
+   
+   
+   
+   
+   
+   
    
    
 ###. ####   

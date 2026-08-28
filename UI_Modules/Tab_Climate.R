@@ -1,7 +1,7 @@
 Tab_UI_Climate <- function() {
   
   
-  tabPanel("Climate",  icon = icon("circle-info", tags$style()),
+  tabPanel("Weather/Climate",  icon = icon("cloud-sun-rain", tags$style()),
            HTML('<div style="margin-left: 20px; ">'),
            
            tabPanel("Climate", "",

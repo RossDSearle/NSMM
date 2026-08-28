@@ -7,7 +7,7 @@
 
 Tab_UI_SoilInformation <- function() {
   
-  tabPanel("Soil Information",  icon = icon("file-lines"),
+  tabPanel("Soil Information",  icon = icon("person-digging"),
             HTML('<div style="margin-left: 20px; ">'),
 
            fluidRow(
@@ -15,8 +15,12 @@ Tab_UI_SoilInformation <- function() {
                    # actionButton('wgtGETDATA', 'Get Soil Data'),
                     plotOutput('wgtProfile')
              ),
+             HTML('<div style="margin-left: 20px; ">'),
+             
              column(10,  tabsetPanel(type = "tabs",
-                     ##### Site Description Tab  ####                            
+                     ##### Site Description Tab  ####  
+                     
+                     
                      tabPanel("Soil Description", htmlOutput('wgtSiteDescription'),
                      HTML('<BR><BR>'),
                      htmlOutput("wgtLabResultsLabel"),
@@ -26,6 +30,7 @@ Tab_UI_SoilInformation <- function() {
                      tabPanel("Lab Data Plots", fluidRow(uiOutput('plots'))),
              )  
              )
+             , HTML('</div>') 
            )
            , HTML('</div>') 
 )}

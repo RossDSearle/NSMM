@@ -25,16 +25,16 @@ makeClimatePageHTML <- function(CurrentSiteData=NULL){
     rec <- fourseasons[i,]
     decrec <- fourseasonsDeciles[i,]
     season <- seasonsDF[seasonsDF$code == rec$Season,]$season
-    seastxt <- paste0(seastxt, "<li>", season, " : ", round(rec$TotalRain), " mm (Decile ", decrec$Decile, ")</li>" )
+    seastxt <- paste0(seastxt, "<li>", season, " : <span style=' font-weight: bold;'>", round(rec$TotalRain), "</span> mm (Decile ", decrec$Decile, ")</li>" )
   }
-  seastxt <- paste0(seastxt, '</ul>')
+  seastxt <- paste0(seastxt, '</ul><BR>')
   
   html <- '<BR><BR>'
   
   locationTxt <- paste0('<P>This climate information was generated using the data from the BoM station at ', CurrentSiteData$BoM_Station_Name, 
-                        ' (', CurrentSiteData$BoM_Station_Number, ') ', CurrentSiteData$Station_Distance , 's 
+                        ' (ID:', CurrentSiteData$BoM_Station_Number, ') ', CurrentSiteData$Station_Distance , 's 
                         from this soil moisture probe site using data sourced from the QLD Govt. 
-                        <a href="https://www.longpaddock.qld.gov.au/silo/" target="_blank">SILO</a> database.')
+                        <a href="https://www.longpaddock.qld.gov.au/silo/" target="_blank">SILO</a> database.</P>.<BR>')
   
   ytdRainfall <- paste0('<P>Year to date rainfall is <span style="color: blue; font-weight: bold;">', tail(AnnualRainfall(rain_xts),1), '</span> mm </P>')
   
