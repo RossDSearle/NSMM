@@ -53,7 +53,7 @@ machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
   APIUrl <<- 'http://203.101.224.137:8071/SensorAPI/'
   source('/srv/plumber/TERNLandscapes/SoilMoistureProbesAPI/Backends/ObjectStore.R')
-  PhotoRoot <- ''
+  PhotoRoot <- '/mnt/data/NSMM/App/Photos'
   setwd('/srv/shiny-server/TERNLandscapesDomain/NSMM')
   
 }else{
@@ -570,7 +570,7 @@ server <- function(input, output, session) {
 
     html <- '<table><tr>'
     
-    np <- ncol(wt)-3
+    np <- ncol(df)-3
     
     cnt=0
     for (i in 1:np) {
