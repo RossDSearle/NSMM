@@ -748,7 +748,7 @@ getSoilProfileDiagram <- function(sid, p){
   
   depth = max(sp$ld)
   # par(oma=c(0,0,0,0)) # all sides have 3 lines of space
-    par(mar=c(0.1,3,6,2))
+    par(mar=c(0.1,3,6,4))
   
   lableft = 1.5
   profleft = 2.5
@@ -810,8 +810,7 @@ getSoilProfileDiagram <- function(sid, p){
       }
      
       mpercAbun = ap * 3
-      print(mpercAbun)
-      
+
       if(rec$p.mott_hvc !=''){
         mcol='black'
         hue <- str_sub(rec$p.mott_hvc, start = 1, end = nchar(rec$p.mott_hvc) - 2)

@@ -46,6 +46,8 @@ library(ggplot2)
 library(scales)
 library(weatherOz)
 
+library(future)
+
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
@@ -301,8 +303,8 @@ border-color: transparent;
         #selected = "Climate",
         
         Tab_UI_SoilMoisture(),
-        Tab_UI_SoilInformation(),
         Tab_UI_Climate(),
+        Tab_UI_SoilInformation(),
         Tab_UI_Photos(),
         Tab_UI_Downloads(),
 
@@ -334,6 +336,7 @@ server <- function(input, output, session) {
   RV$CurrentSiteData = NULL
   RV$Cookie <- NULL
   RV$NatSoilAccessKey <- NatSoilAccessKey
+  RV$StartSite <- NULL
   
 
   ###.####
@@ -504,7 +507,7 @@ server <- function(input, output, session) {
       ltext <- HTML('')
     }else{
       if(nrow(RV$CurrentLabResults)>0){
-      ltext <- HTML('<H4>Soil Test Data</H4>')
+      ltext <- HTML('<H4> <span style="color: #0A3B08; font-weight: bold;">Soil Test Data</span></H4>')
       shinyjs::show('wgtLabResultsLabel')
       }else{
         ltext <- HTML('')
@@ -513,11 +516,21 @@ server <- function(input, output, session) {
     return(ltext)
   })
   
-  output$labResultsTable <-renderUI({
+  output$wgtLabResultsTable <-renderUI({
     req(RV$CurrentLabResults)
     if(nrow(RV$CurrentLabResults)>0){
       ft_lab <- makeLabDataTable(labdata=RV$CurrentLabResults, labinfo=labinfo)
       return(htmltools_value(ft_lab))
+    }else{
+      return(NULL)
+    }
+  })
+  
+  
+  output$wgtLabResultsTableFooter <-renderUI({
+    req(RV$CurrentLabResults)
+    if(nrow(RV$CurrentLabResults)>0){
+      HTML('<P>For more information about the soil test data got to the CSBP <a href="https://csbplab.com.au/tests/soil" target="_blank" >website</a>.</P>')
     }else{
       return(NULL)
     }
@@ -528,7 +541,6 @@ server <- function(input, output, session) {
   #### Render Climate Info Page  #######
   output$wgtClimateInfoPageHTML <- renderUI({
     req(RV$CurrentSiteData)
-    print(RV$CurrentSiteData)
     chtml <- makeClimatePageHTML(CurrentSiteData = RV$CurrentSiteData)
     HTML(chtml)
   })
@@ -542,14 +554,19 @@ server <- function(input, output, session) {
     if(nrow(RV$CurrentLabResults)>0){
     labdata <-  RV$CurrentLabResults
     
-    wt <- makeWideTableDB(labdata)
+    df <- makeWideTableDB(labdata)
+    df <- df[, -1]
+    colnames(df)[1:2] <- c('Upper Depth (cm)', 'Lower Depth (cm)')
     
-    colnames(wt)
-    
-    if(nrow(RV$CurrentLabResults)==0){
-      return('')
+    ### sort the columns to be the same as labinfo
+    sdf <- df[, 1:2]
+    for (i in 1:nrow(labinfo)) {
+      labrec <- labinfo[i,]
+      meth <- labrec$LabCode
+      idx <- which(colnames(df) == meth)
+      sdf <- cbind(sdf, df[idx])
     }
-    
+
     html <- '<table><tr>'
     
     np <- ncol(wt)-3
@@ -557,10 +574,10 @@ server <- function(input, output, session) {
     cnt=0
     for (i in 1:np) {
       cnt=cnt+1
-      b64 <-  plotLabDataDB(df=wt,i)
+      b64 <-  plotLabDataDB(df=sdf,i, labinfo)
       html <- paste0(html, '<td><img src="data:image/png;base64,', b64, '" 
-          width="', 800, '" 
-          height="', 400, '"></td>')
+          width="', 250, '" 
+          height="', 300, '"></td>')
       
       if(cnt==4){
         html <- paste0(html, '</tr><tr>')
@@ -608,6 +625,13 @@ server <- function(input, output, session) {
       }else{
         RV$ShowReporting <- F
       } 
+    }
+    
+    
+    if (!is.null(query[['Site']])) {
+      startsite <- query[['Site']]
+        RV$StartSite <- startsite
+        print(RV$StartSite)
     }
     
     readCookie()
@@ -731,11 +755,22 @@ server <- function(input, output, session) {
      
      site <- ''
     isolate({
+      
+      if(!is.null(RV$StartSite)){
+        p <- URLdecode(RV$StartSite)
+        bits <- str_split(RV$StartSite, '_')
+        net <- bits[[1]][1]
+        sit <- bits[[1]][2]
+        site <- sit
+        
+        
+      }else{
         if(!is.null(RV$Cookie$Network) && input$wgt_SMmain_Network==RV$Cookie$Network){
           site <-  RV$Cookie$Site
         }else{
-         
+          
         }
+      }
     })
     updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$sitename), selected = site)
   }) 
@@ -892,6 +927,14 @@ server <- function(input, output, session) {
   
   ####^^ Render the Timeseries charts for the site  ##########################################################################   
   
+  output$graph_or_message_VolTS <- renderUI({
+    req(RV$CurrentSiteData)
+    if (is.null(RV$CurrentSiteData$TS$volumetric_mm) || nrow(RV$CurrentSiteData$TS$volumetric_mm) == 0) {
+      h4("No soil moisture data is currently available for this site.", style = "font-weight: bold; color: gray; padding: 100px;")
+    } else {
+      dygraphs::dygraphOutput("wgt_SMmain_volTSChart",  width = "800px", height = "180px")
+    }
+  })
   
   output$wgt_SMmain_volTSChart <- renderDygraph({
     
@@ -932,6 +975,16 @@ server <- function(input, output, session) {
   })
   
 
+  
+  
+  output$graph_or_message_rawProbe <- renderUI({
+    
+    if (is.null(RV$CurrentSiteData$TS$rawProbe) || nrow(RV$CurrentSiteData$TS$rawProbe) == 0) {
+      HTML("")
+    } else {
+      dygraphs::dygraphOutput("wgt_SMmain_rawTSChart",  width = "800px", height = "180px")
+    }
+  })  
 
    output$wgt_SMmain_rawTSChart <- renderDygraph({
 
@@ -1019,8 +1072,14 @@ server <- function(input, output, session) {
    
 ####  ^^^ Date Selection ####
     output$wgtSelectedDate <- renderUI({
+      req(RV$CurrentSiteData$TS$volumetric_mmPermm)
+      
      if(is.null(input$chart_clicked_time)){
        dt = 'None'
+       lt <- end(RV$CurrentSiteData$TS$volumetric_mmPermm)
+       dt <-  format(lt, "%Y-%m-%d")
+       RV$CurrentDate <- dt
+       print('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
      }else{
        seconds_epoch <- input$chart_clicked_time / 1000
        posix_time <- as.POSIXct(seconds_epoch, origin = "1970-01-01", tz = "UTC")
@@ -1163,12 +1222,10 @@ server <- function(input, output, session) {
    ### ^ -----  Downloads Tab  ------ ####  
 
    ### ^^ Download volumetric SM  #### 
-  
-   
-   
-   output$downloadData_VolSM <- downloadHandler(
+   output$wgtDownloadData_VolSM <- downloadHandler(
      filename = function() {
-       paste("data-", Sys.Date(), ".csv", sep = "")
+       name <- paste0(input$wgt_SMmain_Network," - ", input$wgt_SMmain_SiteName, ' - Volumetric Soil Water (mm) - ', Sys.Date())
+       paste(name, ".csv", sep = "")
      },
      content = function(file) {
        ts <- RV$CurrentSiteData$TS$volumetric_mmPermm
@@ -1177,6 +1234,43 @@ server <- function(input, output, session) {
      }
    )
    
+   ### ^^ Download Raw probe values  #### 
+   output$wgtDownloadData_RawProbe <- downloadHandler(
+     filename = function() {
+       name <- paste0(input$wgt_SMmain_Network," - ", input$wgt_SMmain_SiteName, ' - Raw Probe Data - ', Sys.Date())
+       paste(name, ".csv", sep = "")
+     },
+     content = function(file) {
+       ts <- RV$CurrentSiteData$TS$rawProbe
+       df_daily <- data.frame(date = index(ts), value = coredata(ts), row.names = NULL)
+       write.csv(df_daily, file, row.names = FALSE)
+     }
+   )  
+   
+   ### ^^ Download Rainfall Data  #### 
+   output$wgtDownloadData_Rainfall <- downloadHandler(
+     filename = function() {
+       name <- paste0(input$wgt_SMmain_Network," - ", input$wgt_SMmain_SiteName, ' - Rainfall - ', Sys.Date())
+       paste(name, ".csv", sep = "")
+     },
+     content = function(file) {
+       ts <- RV$CurrentSiteData$TS$Rainfall
+       df_daily <- data.frame(date = index(ts), value = coredata(ts), row.names = NULL)
+       write.csv(df_daily, file, row.names = FALSE)
+     }
+   )  
+   
+   ### ^^ Download Rainfall Data  #### 
+   output$wgtDownloadData_SoilTestData <- downloadHandler(
+     filename = function() {
+       name <- paste0(input$wgt_SMmain_Network," - ", input$wgt_SMmain_SiteName, ' - Soil Test Data - ', Sys.Date())
+       paste(name, ".csv", sep = "")
+     },
+     content = function(file) {
+       df <- RV$CurrentLabResults
+       write.csv(df, file, row.names = FALSE)
+     }
+   )  
    
    
    

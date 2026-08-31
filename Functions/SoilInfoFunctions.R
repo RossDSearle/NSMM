@@ -10,7 +10,8 @@ getSoilInfo <- function(con = NULL, agencyCode, projectCode, siteID, obsID = 1){
     
    
     s <- getSiteDescriptionDB(con = con, agencyCode = agencyCode, projectCode = projectCode, siteID = siteID, obsID = 1)
-    #SI$Horizons <-  s$HorizonText
+
+    if(!is.null(s)){
     SI$Horizons <- s$HorizonData
     SI$SiteDesc <- s$HTML
     SI$LabResults <- s$LabData
@@ -21,6 +22,15 @@ getSoilInfo <- function(con = NULL, agencyCode, projectCode, siteID, obsID = 1){
     
     # SI$Horizons$ud <- as.integer(SI$Horizons$ud*100)
     # SI$Horizons$ld <- as.integer(SI$Horizons$ld*100)
+    }else{
+      SI$Horizons <- data.frame()
+      SI$SiteDesc <- "<BR><BR><BR><BR><BR><BR><P>No soil informtion is available for this soil moisture probe location.</P>"
+      SI$LabResults <- data.frame()
+      SI$Location <- data.frame()
+      SI$SiteTable <- ''
+      SI$ObservationTable <- ''
+      SI$NotesTable <- ''
+    }
     
     
   } else{
@@ -87,18 +97,22 @@ makeWideTableDB <- function(labData){
 
 
 
-plotLabDataDB <- function(df, i){
+plotLabDataDB <- function(df, i, labinfo){
   
   my_i=i
 
-  vals <- as.numeric(df[,colnames(df)[3+my_i]])
-  inDF <- data.frame(UD=df$samp_upper_depth, LD=df$samp_lower_depth, vals)
+  vals <- as.numeric(df[,colnames(df)[2+my_i]])
+  inDF <- data.frame(UD=df[,1], LD=df[,2], vals)
   idxs <- which(complete.cases(inDF))
   xdf <- inDF[idxs,]
   
-  att <- colnames(df)[3+my_i]
-  units <- labMethods[labMethods$LABM_CODE==att, ]$LABM_UNITS
-  prop <- labMethods[labMethods$LABM_CODE==att, ]$LABM_SHORT_NAME
+  att <- colnames(df)[2+my_i]
+  labrec <- labinfo[labinfo$LabCode == att,]
+  # units <- labMethods[labMethods$LABM_CODE==att, ]$LABM_UNITS
+  # prop <- labMethods[labMethods$LABM_CODE==att, ]$LABM_SHORT_NAME
+  prop <- labrec$ReportName
+  units <- labrec$Units
+  
   
   xBound <-  max(xdf$vals)  + (max(xdf$vals) * 0.2)
   depth <- max(as.numeric(inDF$LD))
@@ -113,7 +127,7 @@ plotLabDataDB <- function(df, i){
         ylab='Soil Depth (m)',
         yaxs = "i", xaxs = "i", xlim = c(0, xBound), ylim = rev(range(c(0,depth))),
         cex.lab = 1,
-        main = paste0(prop, '\n', att, ' (', units, ')')
+        main = paste0(prop, ' ', units, '\n', att)
         
   )
   
@@ -193,6 +207,9 @@ horizonInfo <- OS$DB$NatSoilQueries$getHorizons(con, agencyCode = agencyCode, pr
 LandUseInfo <- OS$DB$NatSoilQueries$getLandUseInfo(con, agencyCode = agencyCode, projectCode=projectCode, siteID=siteID)
 
 
+if(nrow(siteInfo)==0){return(NULL)}
+if(all(is.na(siteInfo))){return(NULL)}
+
 agencyC <- agencyInfo$AGENCY_CODE
 projC <- projectInfo$proj_code
 locT <- paste0(locationInfo$o_longitude_GDA94, ' E.   ', locationInfo$o_latitude_GDA94, ' N.')
@@ -202,7 +219,7 @@ html <- paste0('<BR><table>
                    <col span="1" style="width: 500px;">
                    <col span="1" style="width: 500px;">
                 </colgroup><tbody>
-                 <tr><td><b>Profile ID: </b> <span style="color: #0A20A8; font-weight: bold;">', siteID, '</span></td>')
+                 <tr><td><b>Profile ID: </b> <span style="color: #3E993C; font-weight: bold;">', siteID, '</span></td>')
 
 ol$AgencyCode <- paste0( agencyC)
 ol$ProjectCode <- paste0( projC)
@@ -1585,8 +1602,7 @@ getSoilProfileDiagram <- function(sid, p){
       }
       
       mpercAbun = ap * 3
-      print(mpercAbun)
-      
+
       mcol=NULL
       if(rec$p.mott_hvc !=''){
         mcol='black'
@@ -1802,10 +1818,10 @@ makeLabDataTable <- function(labdata, labinfo){
     flextable::rotate(part = "header", rotation = "btlr")  %>%
     
 
-    flextable::add_footer_lines(values = as_paragraph(
-      "For more details about the lab analysis go to the CSBP ", 
-      hyperlink_text(x = "website", url = "https://csbplab.com.au/tests/soil")
-    )) %>%
+    # flextable::add_footer_lines(values = as_paragraph(
+    #   "For more details about the lab analysis go to the CSBP ", 
+    #   hyperlink_text(x = "website", url = "https://csbplab.com.au/tests/soil")
+    # )) %>%
     
     #flextable::add_footer_lines(  "See notes at the end of this document for method details.") %>%
     flextable::fontsize(size = 8, part = "footer")

@@ -52,8 +52,10 @@ calibration workflow.</P>
 
 <H3>Acknowledgements</H3>
 
+<P>This work is funded by the Terrestrial Ecosystem Research Network (TERN), an Australian Government NCRIS-enabled project.</P>
+
 <H3>Contacts</H3>
-           
+<P>Brendan Malone <a href=mailto:brendan.malone@csiro.au>brendan.malone@csiro.au</a></P>          
            
            "
              

@@ -74,11 +74,11 @@ Tab_UI_SoilMoisture <- function() {
                  
                  
                  
-                 fluidRow( column(12, 'Click on the charts below to select a date to display daily soil moisture diagram for')),
-                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_volTSChart", width = "800px", height = "180px")), 
+                 fluidRow( column(12, HTML('<BR>Click on the charts below to select a date to display daily soil moisture diagram for.<BR><BR>'))),
+                 fluidRow( column(mainChartWidth,  uiOutput("graph_or_message_VolTS") ), 
                            column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px; display: flex; justify-content: flex-start;", HTML('Volumetric Soil<BR>Water (mm).')), 
                                   tags$div(id = "DyTSlegendDivVolId"))  ), 
-                 fluidRow( column(mainChartWidth,   dygraphOutput("wgt_SMmain_rawTSChart", width = "800px", height = "180px")), 
+                 fluidRow( column(mainChartWidth,   uiOutput("graph_or_message_rawProbe") ), 
                            column(mainLegendWidth,  tags$div(style="font-weight: bold;font-size: 13px;", HTML('Raw Probe<BR>Values.')), 
                                   tags$div(id = "DyTSlegendDivRawId"))  ), 
                  fluidRow( column(mainChartWidth,  style = "text-align: right;",   dygraphOutput("wgt_SMmain_rainTSChart", width = "800px", height = "150px")),

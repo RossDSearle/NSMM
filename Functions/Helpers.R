@@ -44,30 +44,39 @@ getTimeSeries <- function(df, filter=NULL, fill.gaps=T, do.trim=T){
 
 
 
-getAllSiteData <- function(user_temp_dir=NULL, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T, fill.gaps=T, do.trim=T){
+getAllSiteData <- function(async=F, user_temp_dir=NULL, Network=NULL, SiteName=NULL,  Email=NULL, makeTS=T, fill.gaps=T, do.trim=T){
   
   ol <- list()
   ol$QueryDate <- Sys.Date()
   ol$Network <- Network
   ol$SiteName <- SiteName 
   
-  if(!is.null(Email)){
-    silo <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='silo', Email = Email)
-    
-    if(!is.null(silo)){
-      ol$BoM_Station_Number <- silo$Station_Number
-      ol$BoM_Station_Name <- silo$Station_Name
-      ol$Station_Distance <- silo$Distance
-      ol$DF$Silo <- silo$Data
-    }
+  if(async){
+    print('Async')
+      future::plan(multisession)
+      
+      f1 <- future(getSILOData(user_temp_dir=NULL, Network, SiteName, Email))
+      f2 <- future(getSMData(user_temp_dir=NULL, Network, SiteName))
+      
+      silo <- value(f1)
+      sm <- value(f2)
+       
+      plan(sequential)
+      
+  }else{
+    print('Serial')
+      silo <- getSILOData(user_temp_dir=NULL, Network, SiteName, Email)
+      sm <- getSMData(user_temp_dir=NULL, Network, SiteName)
   }
   
-   
-  sensD <-  getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='volumetric')     
-  if(!is.null(sensD)){
-        ol$DF$SiteSensorData <- sensD
-  }    
-    
+  if(length(silo)>0){
+    ol$DF$Silo <- silo$DF$Silo
+    ol$BoM_Station_Number <- silo$BoM_Station_Number
+    ol$BoM_Station_Name <- silo$BoM_Station_Name
+    ol$Station_Distance <- silo$Station_Distance
+    }
+  if(length(sm)>0){ol$DF$SiteSensorData <-  sm$DF$SiteSensorData}
+  
   
   if(makeTS){
     if(!is.null(ol$DF$SiteSensorData)){
@@ -83,14 +92,42 @@ getAllSiteData <- function(user_temp_dir=NULL, Network=NULL, SiteName=NULL,  Ema
   return(ol)
 }
 
-getGlobalData <- function(){
+getSMData <- function(user_temp_dir, Network, SiteName){
+  
+  ol <- list()
+  
+  sensD <-  getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='volumetric')     
+  if(!is.null(sensD)){
+    ol$DF$SiteSensorData <- sensD
+  }    
+  return(ol)
+}
+
+getSILOData <- function(user_temp_dir, Network, SiteName, Email){
+  
+  ol <- list()
+  if(!is.null(Email)){
+    silo <- getData(user = user_temp_dir, Network = Network, SiteName = SiteName, what='silo', Email = Email)
+    
+    if(!is.null(silo)){
+      ol$BoM_Station_Number <- silo$Station_Number
+      ol$BoM_Station_Name <- silo$Station_Name
+      ol$Station_Distance <- silo$Distance
+      ol$DF$Silo <- silo$Data
+    }
+  }
+  return(ol)
+}
+
+getGlobalData <- function(Network='NSMM'){
   
   ol <- list()
   ol$glbNetworks <- queryAPI(EP = 'Networks')
-  ol$glbSites <- queryAPI(EP = 'Sites')
+  ol$glbSites <- queryAPI(EP = paste0('Sites?network=', Network))
   ol$glbHarvestDates <- queryAPI(EP = 'RunSQLQuery?SQL=select distinct dt from HarvestLog order by dt DESC')
   ol$SensorSummary <-  queryAPI(EP = 'Sensors?verbose=true')
   csm <-  queryAPI(EP = 'LatestSurfaceSoilMoisture?numDays=2&SoilMoistureReadingType=RawSensor')
+  csm <- csm[csm$network==Network,]
   csm$soilmoisture <- as.numeric(csm$soilmoisture)
   ol$glbCurrentSurfaceSoilMoisture <- csm
   ol$glbSensorDataTypes <- queryAPI(EP = 'SensorDataTypes')
@@ -100,7 +137,7 @@ getGlobalData <- function(){
   
 }
 
-getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email=NULL, fill.gaps=T, do.trim=T){
+getData <- function(user=NULL, Network='NSMM', SiteName='', what='volumetric', Email=NULL, fill.gaps=T, do.trim=T){
   # what options are silo, volumetric, globals
   
   
@@ -133,7 +170,9 @@ getData <- function(user=NULL, Network='', SiteName='', what='volumetric', Email
   }else{
     
     if(what=='silo'){
-      url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM&&startdate=19600101')
+      #url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=RXNEJHM&startdate=19600101')
+      url <-paste0('SiloWeatherData?network=', Network,'&sitename=',SiteName, '&email=', Email, '&variables=R&startdate=19600101')
+      
       data <- queryAPI(EP = url )
       if(class(data)!='list'){
         return(NULL)
