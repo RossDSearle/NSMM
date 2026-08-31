@@ -60,25 +60,25 @@ get_DBHelpers <- function()
   
   
   DB$doQuery <- function(con, sql){
-        res <- dbSendQuery(con, sql)
-        rows <- dbFetch(res)
-        dbClearResult(res)
-        return(rows)
-      }
-      
+    res <- dbSendQuery(con, sql)
+    rows <- dbFetch(res)
+    dbClearResult(res)
+    return(rows)
+  }
+  
   DB$doInsert <- function(con, sql){
-        if(!is.null(sql)){
-        
-         ql <- makeParameterInsertQuery(sql)
-          res <- dbSendStatement(con, ql$SQL)
-          dbBind(res,ql$Vals)
-          rows <- dbGetRowsAffected(res)
-          dbClearResult(res)
-          
-        return(rows)
-        }else{
-          return(0)
-        }
+    if(!is.null(sql)){
+      
+      ql <- makeParameterInsertQuery(sql)
+      res <- dbSendStatement(con, ql$SQL)
+      dbBind(res,ql$Vals)
+      rows <- dbGetRowsAffected(res)
+      dbClearResult(res)
+      
+      return(rows)
+    }else{
+      return(0)
+    }
   }
   
   DB$doInsertUsingRawSQL <- function(con, sql){
@@ -90,29 +90,29 @@ get_DBHelpers <- function()
       return(0)
     }
   }
-      
+  
   DB$doExec <- function(con, sql){
-        res <- dbExecute (con, sql)
-        return()
-      }
-      
+    res <- dbExecute (con, sql)
+    return()
+  }
+  
   DB$deleteAllData <- function(con, projCode=NULL){
     
     appcon <- OS$DB$Config$getCon(OS$DB$Config$DBNames$AppDB)$Connection
     tableLevels <- OS$DB$Helpers$doQuery(appcon, "select * from NatSoil_TableLevels")
     dbDisconnect(appcon)
     
-        dfd <- tableLevels[rev(order(tableLevels$Level)), ]
-        for (i in 1:nrow(dfd)) {
-          rec<-dfd[i,]$Table
-          print(paste0('Deleting data from ', rec))
-          
-          sql <- paste0('DELETE from ', rec)
-          if(!is.null(projCode)){
-            sql <- paste0(sql, " WHERE proj_code'", projCode, "'")
-          }
-          OS$DB$Helpers$doExec(con, sql)
-        }
+    dfd <- tableLevels[rev(order(tableLevels$Level)), ]
+    for (i in 1:nrow(dfd)) {
+      rec<-dfd[i,]$Table
+      print(paste0('Deleting data from ', rec))
+      
+      sql <- paste0('DELETE from ', rec)
+      if(!is.null(projCode)){
+        sql <- paste0(sql, " WHERE proj_code'", projCode, "'")
+      }
+      OS$DB$Helpers$doExec(con, sql)
+    }
   }
   
   DB$deleteAllHorizons <- function(con){
@@ -149,20 +149,20 @@ get_DBHelpers <- function()
       #               "o_id = '", obsNo, "'"
       # )
       # }else{
-        sql <- paste0("DELETE from ", rec, " WHERE 
+      sql <- paste0("DELETE from ", rec, " WHERE 
                          agency_code = '", agencyCode, "' and ",
-                      "proj_code = '", projCode, "' and ",
-                      "s_id = '", siteID, "'"
-        )
-        
+                    "proj_code = '", projCode, "' and ",
+                    "s_id = '", siteID, "'"
+      )
+      
       #}
-
-     OS$DB$Helpers$doExec(con, sql)
+      
+      OS$DB$Helpers$doExec(con, sql)
     }
     
   }
-
-return(DB)
-
+  
+  return(DB)
+  
 }
 
