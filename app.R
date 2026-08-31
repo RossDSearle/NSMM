@@ -618,7 +618,9 @@ server <- function(input, output, session) {
 ####  Read URL Parameters  #######  
 #####  Show/Hide UI Components   #######
   observe({
+    
     query <- parseQueryString(session$clientData$url_search)
+    
     if (!is.null(query[['adminkey']])) {
       akey <- query[['adminkey']]
       if(akey == AdminKey){
@@ -632,7 +634,6 @@ server <- function(input, output, session) {
     if (!is.null(query[['Site']])) {
       startsite <- query[['Site']]
         RV$StartSite <- startsite
-        print(RV$StartSite)
     }
     
     readCookie()
@@ -755,11 +756,15 @@ server <- function(input, output, session) {
      df <- glbSites[glbSites$network==input$wgt_SMmain_Network, ]
      
      site <- ''
+     
+     
     isolate({
       
       if(!is.null(RV$StartSite)){
+        
         p <- URLdecode(RV$StartSite)
-        bits <- str_split(RV$StartSite, '_')
+        print(p)
+        bits <- str_split(p, '_')
         net <- bits[[1]][1]
         sit <- bits[[1]][2]
         site <- sit
@@ -773,6 +778,8 @@ server <- function(input, output, session) {
         }
       }
     })
+    
+
     updateSelectInput(session, inputId = 'wgt_SMmain_SiteName', choices = sort(df$sitename), selected = site)
   }) 
 
@@ -1080,7 +1087,7 @@ server <- function(input, output, session) {
        lt <- end(RV$CurrentSiteData$TS$volumetric_mmPermm)
        dt <-  format(lt, "%Y-%m-%d")
        RV$CurrentDate <- dt
-       print('MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM')
+
      }else{
        seconds_epoch <- input$chart_clicked_time / 1000
        posix_time <- as.POSIXct(seconds_epoch, origin = "1970-01-01", tz = "UTC")
