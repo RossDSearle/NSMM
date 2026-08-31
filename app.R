@@ -51,7 +51,7 @@ library(future)
 
 machineName <- as.character(Sys.info()['nodename'])
 if (machineName=='landscapes-soils') {
-  APIUrl <<- 'http://203.101.224.137:8071/SensorAPI'
+  APIUrl <<- 'http://203.101.224.137:8071/SensorAPI/'
   source('/srv/plumber/TERNLandscapes/SoilMoistureProbesAPI/Backends/ObjectStore.R')
   PhotoRoot <- ''
   setwd('/srv/shiny-server/TERNLandscapesDomain/NSMM')

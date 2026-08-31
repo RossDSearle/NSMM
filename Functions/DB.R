@@ -2,14 +2,14 @@
 
 
 
-wd <- getwd()
+#wd <- getwd()
 #setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/Apps/NSMPReporting')
 
 source('Secrets/DBServerConfig.R')
 source('Secrets/DBconfig.R')
 source('Secrets/DBLogins.R')
 source('Functions/dbHelpers.R')
-#source('Code/DBNatsoilQueries.R')
+source('Functions/DBNatsoilQueries.R')
 
 
 
@@ -20,7 +20,7 @@ OS$DB$Logins <- get_DBLogins()
 OS$DB$NatSoilQueries <- get_NatSoilQueries()
 
 
-setwd(wd)
+#setwd(wd)
 
 
 getNatSoilProjectsCon <- function(){
