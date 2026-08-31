@@ -3,13 +3,13 @@
 
 
 wd <- getwd()
-setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/Apps/NSMPReporting')
+#setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/Apps/NSMPReporting')
 
 source('Secrets/DBServerConfig.R')
 source('Secrets/DBconfig.R')
 source('Secrets/DBLogins.R')
-source('Code/dbHelpers.R')
-source('Code/DBNatsoilQueries.R')
+source('Functions/dbHelpers.R')
+#source('Code/DBNatsoilQueries.R')
 
 
 
