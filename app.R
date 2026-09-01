@@ -940,34 +940,66 @@ server <- function(input, output, session) {
   
   
   
-  output$wgtProbeQuality  <- renderUI({
+  output$wgtProbeQuality <- renderUI({ 
     req(RV$CurrentSiteData$probeQuality$probeQualityRating)
-
-    print(RV$CurrentSiteData$probeQuality)
-
-    if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Low'){
-      col='red'
-    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'OK'){
-      col='orange'
-    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Good'){
-      col='green'
-    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Excellent'){
-      col='darkgreen'
-    }
-
-    HTML(paste0('The quality of the volumetric water value estimates is <span style="color: ',col ,'; font-weight: bold;">',
-                RV$CurrentSiteData$probeQuality$probeQualityRating, '</span>. ', RV$CurrentSiteData$probeQuality$probeQualityText))
-
+    
+    # Determine color based on rating
+    col <- switch(RV$CurrentSiteData$probeQuality$probeQualityRating,
+                  "Low" = "red",
+                  "OK" = "orange",
+                  "Good" = "green",
+                  "Excellent" = "darkgreen",
+                  "black") # Default fallback
+    
+    # Construct the UI using tagList and actionLink
+    tagList(
+      HTML(paste0('The accuracy of the volumetric water value estimates is <span style="color: ', col, '; font-weight: bold;">', 
+                  RV$CurrentSiteData$probeQuality$probeQualityRating, '</span>. ', 
+                  RV$CurrentSiteData$probeQuality$probeQualityText)),
+      actionLink("wgtProbeQaulLink", " More Calibration Info")
+    )
   })
   
+  # 2. Server Observer
   observeEvent(input$wgtProbeQaulLink, {
+    
+    bits <- str_split(RV$CurrentSiteData$probeQuality$probeQaulityDescription, '[.]')
+    col <- switch(RV$CurrentSiteData$probeQuality$probeQualityRating,
+                  "Low" = "red",
+                  "OK" = "orange",
+                  "Good" = "green",
+                  "Excellent" = "darkgreen",
+                  "black") # Default fallback
+    
+    
+    html <- paste0("<P>Estimating volumetric soil water values from the raw probe values is based on soil attributes and the raw responses of the probes. 
+                   The length of time the probes has been installed, the climate it has been exposed to and the accuracy of the soil hydraulic properties 
+                   all have an impact on the reliability of these estimates.</P>",
+                   "<BR><P>This probe currently has a ", '<span style="color: ', col, '; font-weight: bold;">', RV$CurrentSiteData$probeQuality$probeQualityRating , "</span> reliability rating due to these factors :</P>",
+                   "<P><span style='font-weight: bold;'>Probe Duration : </span>", bits[[1]][1] , "</P>", 
+                   "<P><span style='font-weight: bold;'>Dry Periods : </span>", bits[[1]][2] , "</P>", 
+                   "<P><span style='font-weight: bold;'>Wet Periods : </span>", bits[[1]][3] , "</P>", 
+                   "<P><span style='font-weight: bold;'>Soil Hydraulic Properties : </span>", bits[[1]][4] , "</P>", 
+                   "<BR><BR>",
+                   "<P>The quality of the volumetric soil moisture estimates will improve over time as more data becomes available.</P>"
+    )
+    
     showModal(modalDialog(
       title = "Volumetric Water Content Estimates Quality.",
-      paste0(RV$CurrentSiteData$probeQuality$probeQaulityDescription),
-      
+      tags$head(
+        tags$style(HTML(".modal-dialog { max-width: 800px !important; }"))
+      ),
+     HTML(html),
       easyClose = TRUE,
+     size = "l",
       footer = modalButton("Close")
     ))
+  })
+  
+  # 3. Optional: Separate text renderer for the modal content to ensure stability
+  output$modalText <- renderText({
+    req(RV$CurrentSiteData$probeQuality$probeQaulityDescription)
+    RV$CurrentSiteData$probeQuality$probeQaulityDescription
   })
   
   
