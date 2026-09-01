@@ -92,7 +92,7 @@ agencies <<- read.csv('Resources/agencies.csv')
 labMethods <<- read.csv('Resources/labMethods.csv')
 labinfo <<- read.csv('Data/LabInfo.csv')
 
-CalibrationCategories <<- read.csv('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Data/CalibrationCategories.csv')
+CalibrationCategories <<- read.csv('Data/CalibrationCategories.csv')
 
 
 largePhotoWidth = 650
