@@ -828,15 +828,12 @@ server <- function(input, output, session) {
     labs <- lapply(seq(nrow(pts)), function(i) {
       paste0( '<li>Network : ', pts[i, ]$network, '</li>
                   <li>Site Name : ', pts[i, ]$sitename, '</li>
-
-                  <li>Current Value : ', sprintf("%.2f",  pts[i, ]$soilmoisture) , '</li>
+                  <li>Current Value : ', sprintf("%.2f",  pts[i, ]$soilmoisture) ,  '</li>'
                  
-
-                  <li>Access : ', pts[i, ]$access, '</li>
-                  <li>Install Date : <b>', pts[i, ]$installdate, '</b></li>
+                  #<li>Install Date : <b>', pts[i, ]$installdate, '</b></li>
 
                 
-              ')})
+              )})
     
     sid <- paste0(pts$network, '!', pts$sitename)
     
@@ -966,11 +963,7 @@ server <- function(input, output, session) {
   observeEvent(input$wgtProbeQaulLink, {
     showModal(modalDialog(
       title = "Volumetric Water Content Estimates Quality.",
-      
-      # Read the reactive value directly using parentheses ()
-      paste0(RV$CurrentSiteData$probeQuality$probeQaulityDescription, 'Thus '
-             
-      ),
+      paste0(RV$CurrentSiteData$probeQuality$probeQaulityDescription),
       
       easyClose = TRUE,
       footer = modalButton("Close")
