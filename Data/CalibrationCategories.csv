@@ -11,7 +11,7 @@ highDec,0,8,1,The probe has experienced a Decile 8 season or less.
 bucketEstimate,SLGApedo,,2,The soil water holding capacity is estimated from National scale data.
 bucketEstimate,LABpedo,,4,The soil water holding capacity is estimated from lab measured PSA data.
 bucketEstimate,WRC,,6,The soil water holding capacity is estimated from pressure plate measurements.
-Total,5,9,Low,The probe calibration is of low quality. Please do not take too much notice of the Volumetric values. Use with caution.
+Total,5,9,Low,The probe calibration is of low quality. Please do not take too much notice of the Volumetric values. Use with caution. Maybe just look at the trends in the Raw Values chart
 Total,9,12,OK,The probe calibration quality is OK. Use with caution.
 Total,12,15,Good,The probe calibration quality is pretty good. You can most likely trust the volumetric value estimates.
 Total,15,16,Excellent,The probe calibration quality is very good. You can trust the volumetric value estimates.

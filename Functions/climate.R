@@ -4,20 +4,20 @@
 makeClimatePageHTML <- function(CurrentSiteData=NULL){
   
   imagePath <- tempfile(fileext = '.png')
-  # seasonsDF <- data.frame(code=c('DJF',  'MAM', 'JJA', 'SON'), season=c( 'Summer', 'Autumn', 'Winter', 'Spring'))
-  # 
+   seasonsDF <- data.frame(code=c('DJF',  'MAM', 'JJA', 'SON'), season=c( 'Summer', 'Autumn', 'Winter', 'Spring'))
+   
   # #siloDF <- read.csv('c:/temp/nhill.csv')
   # #siloDF <- CurrentSiteData$TS$Rainfall
-  # rain_xts <- CurrentSiteData$TS$Rainfall
-  # colnames(rain_xts) <- 'Rainfall'
-  # 
-  # seasonal_totals <- AllSeasonalRainfallTotals(rain_xts)
-  # fourseasons <- tail(seasonal_totals,4)
-  # seasDeciles <- Decile_AllSeasons(rain_xts, wide=F)
-  # fourseasonsDeciles <- tail(seasDeciles,4)
-  # 
-  # last_12_months <- last(rain_xts, "12 months")
+   rain_xts <- CurrentSiteData$TS$Rainfall
+   colnames(rain_xts) <- 'Rainfall'
   
+   seasonal_totals <- CurrentSiteData$SiloSummary$seasonal_totals
+   fourseasons <- CurrentSiteData$SiloSummary$fourseasons
+   seasDeciles <- CurrentSiteData$SiloSummary$seasDeciles
+   
+   fourseasonsDeciles <- tail(seasDeciles,4)
+   
+   last_12_months <- CurrentSiteData$SiloSummary$last_12_months
   
   
   seastxt <- 'Rainfall totals for the previous 4 seasons : <ul>'
@@ -53,9 +53,9 @@ makeClimatePageHTML <- function(CurrentSiteData=NULL){
   
   html <- paste0(html, seastxt)
   
-  b64Monthly <- plotMonthlyTotalComparisons(allSiteData, imagePath)
-  b64CumAnn <- plotCummulativeDailyRainfallPerYear(allSiteData, imagePath)
-  b64heatMap <- plotSeasonalHeatMap(rain_xts, imagePath)
+  b64Monthly <- plotMonthlyTotalComparisons(CurrentSiteData, imagePath)
+  b64CumAnn <- plotCummulativeDailyRainfallPerYear(CurrentSiteData, imagePath)
+  b64heatMap <- plotSeasonalHeatMap(CurrentSiteData, imagePath)
   
   html <- paste0(html, '<table>')
   
@@ -508,6 +508,8 @@ plotCummulativeDailyRainfallPerYear <- function(allSiteData, imagePath=NULL){
 
 
 plotSeasonalHeatMap <- function(allSiteData, imagePath=NULL){
+  
+  df_deciles <- allSiteData$SiloSummary$AllSeasonalDeciles
   
   # 4. Generate the Heatmap
   p <- ggplot(df_deciles, aes(x = season, y = factor(season_year), fill = factor(decile))) +
