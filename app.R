@@ -92,6 +92,9 @@ agencies <<- read.csv('Resources/agencies.csv')
 labMethods <<- read.csv('Resources/labMethods.csv')
 labinfo <<- read.csv('Data/LabInfo.csv')
 
+CalibrationCategories <<- read.csv('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM/Data/CalibrationCategories.csv')
+
+
 largePhotoWidth = 650
 
 NatSoilAccessKey = ''
@@ -120,6 +123,7 @@ glbCalibrationInfo <<- gd$CalibrationInfo
 
 
 rainChartMaxYVal = 30
+defaultEmail <<- 'ross.searle@gmail.com'
 
 
 
@@ -896,7 +900,7 @@ server <- function(input, output, session) {
     
     tryCatch({
 
-      sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email='ross.searle@gmail.com', makeTS = T)
+      sd <- getAllSiteData(user=user_temp_dir, Network = input$wgt_SMmain_Network, SiteName = input$wgt_SMmain_SiteName, Email=defaultEmail, makeTS = T)
       RV$CurrentSiteData <- sd
       
     }, error = function(e) {
@@ -934,6 +938,45 @@ server <- function(input, output, session) {
   
   
   ####^^ Render the Timeseries charts for the site  ##########################################################################   
+  
+  
+  
+  
+  
+  output$wgtProbeQuality  <- renderUI({
+    req(RV$CurrentSiteData$probeQuality$probeQualityRating)
+
+    print(RV$CurrentSiteData$probeQuality)
+
+    if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Low'){
+      col='red'
+    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'OK'){
+      col='orange'
+    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Good'){
+      col='green'
+    }else if(RV$CurrentSiteData$probeQuality$probeQualityRating == 'Excellent'){
+      col='darkgreen'
+    }
+
+    HTML(paste0('The quality of the volumetric water value estimates is <span style="color: ',col ,'; font-weight: bold;">',
+                RV$CurrentSiteData$probeQuality$probeQualityRating, '</span>. ', RV$CurrentSiteData$probeQuality$probeQualityText))
+
+  })
+  
+  observeEvent(input$wgtProbeQaulLink, {
+    showModal(modalDialog(
+      title = "Volumetric Water Content Estimates Quality.",
+      
+      # Read the reactive value directly using parentheses ()
+      paste0(RV$CurrentSiteData$probeQuality$probeQaulityDescription, 'Thus '
+             
+      ),
+      
+      easyClose = TRUE,
+      footer = modalButton("Close")
+    ))
+  })
+  
   
   output$graph_or_message_VolTS <- renderUI({
     req(RV$CurrentSiteData)

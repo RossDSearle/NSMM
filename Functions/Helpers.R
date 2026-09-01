@@ -69,12 +69,13 @@ getAllSiteData <- function(async=F, user_temp_dir=NULL, Network=NULL, SiteName=N
       sm <- getSMData(user_temp_dir=NULL, Network, SiteName)
   }
   
-  if(length(silo)>0){
+  if(length(silo)>0){  #### Now implies silo is always included
     ol$DF$Silo <- silo$DF$Silo
     ol$BoM_Station_Number <- silo$BoM_Station_Number
     ol$BoM_Station_Name <- silo$BoM_Station_Name
     ol$Station_Distance <- silo$Station_Distance
-    }
+  }
+  
   if(length(sm)>0){ol$DF$SiteSensorData <-  sm$DF$SiteSensorData}
   
   
@@ -89,8 +90,66 @@ getAllSiteData <- function(async=F, user_temp_dir=NULL, Network=NULL, SiteName=N
     }
   }
   
-  return(ol)
+  
+  
+ ol2 <- doSILOSummary(allSiteData=ol)
+ ol3 <- doCalibrationAnalysis(allsd=ol2)
+  
+  return(ol3)
 }
+
+doCalibrationAnalysis <- function(allsd){
+ 
+  ci <- CalibrationCategories
+   
+  ca <- queryAPI(EP = paste0('BucketCalibrationInfo?network=',allsd$Network ,'&sitename=', allsd$SiteName))
+ 
+  idxs <- which(!is.na(allsd$DF$SiteSensorData$`Soil-Moisture_250`))
+  recordLength <- nrow(allsd$DF$SiteSensorData[idxs,])
+  
+  bts  <- xts(rep(1, length(index(allsd$TS$rawProbe))), order.by = index(allsd$TS$rawProbe))
+  btsDec <- calcAllSeasonalDeciles(bts)
+  merged_inner <- merge(btsDec, allsd$SiloSummary$AllSeasonalDeciles, join = "inner", by=c('season_year', 'season'))
+  probeDeciles <- merged_inner[, c(1,2,8)]
+  
+  lowDec <- min(probeDeciles$decile.y)
+  highDec <- max(probeDeciles$decile.y)
+  
+  #data.frame(duration=recordLength, lowDec, highDec, bucketEstimate=ca$CalibSource)
+  
+  
+  xx <- ci[which(ci$Component=='duration' ),]
+  durationrec <- ci[which(recordLength >= as.numeric(xx$LowerValue) & recordLength < as.numeric(xx$UpperValue)),]
+  xx <- ci[which(ci$Component=='lowDec' ),]
+  decLowrec <- xx[which(lowDec > as.numeric(xx$LowerValue) & lowDec <= as.numeric(xx$UpperValue)),]
+  xx <- ci[which(ci$Component=='highDec'),]
+  decHighrec <- xx[which(highDec > as.numeric(xx$LowerValue) & highDec <= as.numeric(xx$UpperValue)),]
+  
+  swrec <- ci[which(ci$Component=='bucketEstimate' & ci$LowerValue==ca$CalibSource),]
+  
+  
+  probeQualityValue = as.numeric(durationrec$Contribution) + as.numeric(decLowrec$Contribution) + as.numeric(decHighrec$Contribution) + as.numeric(swrec$Contribution)
+  
+  
+  xx <- ci[which(ci$Component=='Total' ),]
+  pr <- xx[which(probeQualityValue > as.numeric(xx$LowerValue) & probeQualityValue <= as.numeric(xx$UpperValue)),]
+
+probeQualityRating = pr$Contribution
+probeQualityText = pr$Description
+probeQaulityDescription <- paste0(durationrec$Description, ' ', decLowrec$Description,  ' ', decHighrec$Description, ' ', swrec$Description)
+
+
+allsd$probeQuality$probeQualityValue <- probeQualityValue
+allsd$probeQuality$probeQualityRating <- probeQualityRating
+allsd$probeQuality$probeQualityText <- probeQualityText
+allsd$probeQuality$probeQaulityDescription <- probeQaulityDescription
+
+
+ return(allsd)
+  
+}
+
+
 
 getSMData <- function(user_temp_dir, Network, SiteName){
   

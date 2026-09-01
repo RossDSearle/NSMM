@@ -15,26 +15,30 @@ for (i in 1:length(dirs)) {
   if(!dir.exists(od)){dir.create(od, recursive = T)}
   
   fls <- list.files(paste0(inDir, '/', d), ".(jpg|jpeg|png)$", full.names = T )
-  for (j in 1:length(fls)) {
-    f <- fls[j]
-    Image <- image_read(f)
-    
-    if(info$width > info$height){
-       thmb <- image_resize(Image, geometry = "200x")
-    }else{
-      
-      thmb <- image_resize(Image, geometry = "x200")
+    if(length(fls)>0){
+        for (j in 1:length(fls)) {
+          f <- fls[j]
+          Image <- image_read(f)
+          img_width <- image_info(Image)$width
+          img_height <- image_info(Image)$height
+          
+          if(img_width > img_height){
+             thmb <- image_resize(Image, geometry = "200x")
+          }else{
+            
+            thmb <- image_resize(Image, geometry = "x200")
+          }
+          
+          
+         
+          fname <- basename(f)
+          ext <- tools::file_ext(fname)
+          outname <- str_remove(fname, paste0('.', ext))
+          
+          image_write(thmb,  paste0(outDir,'/', d, '/Thumbnails/Thumbnail_', outname, '.jpg'))
+          image_write(Image,  paste0(outDir,'/', d, '/', outname, '.jpg'))
+        }
     }
-    
-    
-   
-    fname <- basename(f)
-    ext <- tools::file_ext(fname)
-    outname <- str_remove(fname, paste0('.', ext))
-    
-    image_write(thmb,  paste0(outDir,'/', d, '/Thumbnails/Thumbnail_', outname, '.jpg'))
-    image_write(Image,  paste0(outDir,'/', d, '/', outname, '.jpg'))
-  }
 }
 
 

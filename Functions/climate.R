@@ -4,19 +4,19 @@
 makeClimatePageHTML <- function(CurrentSiteData=NULL){
   
   imagePath <- tempfile(fileext = '.png')
-  seasonsDF <- data.frame(code=c('DJF',  'MAM', 'JJA', 'SON'), season=c( 'Summer', 'Autumn', 'Winter', 'Spring'))
-  
-  #siloDF <- read.csv('c:/temp/nhill.csv')
-  #siloDF <- CurrentSiteData$TS$Rainfall
-  rain_xts <- CurrentSiteData$TS$Rainfall
-  colnames(rain_xts) <- 'Rainfall'
-  
-  seasonal_totals <- AllSeasonalRainfallTotals(rain_xts)
-  fourseasons <- tail(seasonal_totals,4)
-  seasDeciles <- Decile_AllSeasons(rain_xts, wide=F)
-  fourseasonsDeciles <- tail(seasDeciles,4)
-  
-  last_12_months <- last(rain_xts, "12 months")
+  # seasonsDF <- data.frame(code=c('DJF',  'MAM', 'JJA', 'SON'), season=c( 'Summer', 'Autumn', 'Winter', 'Spring'))
+  # 
+  # #siloDF <- read.csv('c:/temp/nhill.csv')
+  # #siloDF <- CurrentSiteData$TS$Rainfall
+  # rain_xts <- CurrentSiteData$TS$Rainfall
+  # colnames(rain_xts) <- 'Rainfall'
+  # 
+  # seasonal_totals <- AllSeasonalRainfallTotals(rain_xts)
+  # fourseasons <- tail(seasonal_totals,4)
+  # seasDeciles <- Decile_AllSeasons(rain_xts, wide=F)
+  # fourseasonsDeciles <- tail(seasDeciles,4)
+  # 
+  # last_12_months <- last(rain_xts, "12 months")
   
   
   
@@ -53,8 +53,8 @@ makeClimatePageHTML <- function(CurrentSiteData=NULL){
   
   html <- paste0(html, seastxt)
   
-  b64Monthly <- plotMonthlyTotalComparisons(rain_xts, imagePath)
-  b64CumAnn <- plotCummulativeDailyRainfallPerYear(rain_xts, imagePath)
+  b64Monthly <- plotMonthlyTotalComparisons(allSiteData, imagePath)
+  b64CumAnn <- plotCummulativeDailyRainfallPerYear(allSiteData, imagePath)
   b64heatMap <- plotSeasonalHeatMap(rain_xts, imagePath)
   
   html <- paste0(html, '<table>')
@@ -72,40 +72,43 @@ makeClimatePageHTML <- function(CurrentSiteData=NULL){
  
   
    html <- paste0(html, '</table>')
-  
-  html
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  # np <- ncol(wt)-3
-  # 
-  # cnt=0
-  # for (i in 1:np) {
-  #   cnt=cnt+1
-  #   b64 <-  plotLabDataDB(df=wt,i)
-  #   html <- paste0(html, '<td><img src="data:image/png;base64,', b64, '" 
-  #         width="', 250, '" 
-  #         height="', 300, '"></td>')
-  #   
-  #   if(cnt==4){
-  #     html <- paste0(html, '</tr><tr>')
-  #     cnt=0
-  #   }
-  # }
-  # 
-  # html <- paste0(html, '</tr></table')
-
   return(html)
   
 }
+
+
+doSILOSummary <- function(allSiteData){
+  
+  seasonsDF <- data.frame(code=c('DJF',  'MAM', 'JJA', 'SON'), season=c( 'Summer', 'Autumn', 'Winter', 'Spring'))
+  
+  rain_xts <- allSiteData$TS$Rainfall
+  colnames(rain_xts) <- 'Rainfall'
+  
+  seasonal_totals <- AllSeasonalRainfallTotals(rain_xts)
+  fourseasons <- tail(seasonal_totals,4)
+  seasDeciles <- Decile_AllSeasons(rain_xts, wide=F)
+  fourseasonsDeciles <- tail(seasDeciles,4)
+  last_12_months <- last(rain_xts, "12 months")
+  monthlySummaries <- calcMonthlyHistoricalSummary(rain_xts)
+  CummulativeDailyRainfallPerYear <- calcCummulativeDailyRainfallPerYear(rain_xts)
+  AllSeasonalDeciles <- calcAllSeasonalDeciles(rain_xts)
+  
+  allSiteData$SiloSummary$rain_xts <- rain_xts
+  allSiteData$SiloSummary$seasonal_totals <- seasonal_totals
+  allSiteData$SiloSummary$fourseasons <- fourseasons
+  allSiteData$SiloSummary$seasDeciles <- seasDeciles
+  allSiteData$SiloSummary$fourseasonsDeciles <- fourseasonsDeciles
+  allSiteData$SiloSummary$last_12_months <- last_12_months
+  allSiteData$SiloSummary$monthlySummaries <- monthlySummaries
+  allSiteData$SiloSummary$CummulativeDailyRainfallPerYear <- CummulativeDailyRainfallPerYear
+  allSiteData$SiloSummary$AllSeasonalDeciles <- AllSeasonalDeciles
+  
+return(allSiteData)
+  
+}
+
+
+
 
 makeRainTSfromSILOData <- function(siloDF){
   df <-siloDF[, c(4,5)]
@@ -323,8 +326,68 @@ if(!wide){
 }
 
 
-plotSeasonalHeatMap <- function(rain_xts, imagePath=NULL){
 
+calcMonthlyHistoricalSummary <- function(rain_xts){
+  
+  # 1. Convert the daily xts object to a data.table
+  rain_df <- data.table(
+    Date = index(rain_xts),
+    Rain = as.numeric(rain_xts)
+  )
+  rain_df[is.na(Rain), Rain := 0]
+  
+  # 2. Extract Year and Month attributes
+  rain_df[, Year  := format(Date, "%Y")]
+  rain_df[, Month := format(Date, "%b")] # e.g., "Jan", "Feb"
+  rain_df[, MonthNum := as.integer(format(Date, "%m"))]
+  
+  # 3. Calculate total rainfall for every specific month in the dataset
+  monthly_totals <- rain_df[, .(TotalRain = sum(Rain)), by = .(Year, Month, MonthNum)]
+  
+  # 4. Separate this year (2026) totals from historical records
+  yr <- year(Sys.Date())
+  this_year_totals <- monthly_totals[Year == yr, .(Month, MonthNum, Rain = TotalRain, Type = paste0(yr, " Total"))]
+  
+  # 5. Calculate the historical baseline average for each calendar month
+  historical_avg <- monthly_totals[Year != yr, .(Rain = mean(TotalRain)), by = .(Month, MonthNum)]
+  historical_avg[, Type := "Historical Average"]
+  
+  tl <- list()
+  tl$this_year_monthly_totals <- this_year_totals
+  tl$Historical_monthly_totals <- historical_avg
+
+  return(tl)
+}
+
+
+calcCummulativeDailyRainfallPerYear <- function(rain_xts){
+  # 1. Convert the daily xts object to a data.table
+  rain_df <- data.table(
+    Date = index(rain_xts),
+    Rain = as.numeric(rain_xts)
+  )
+  
+  # 2. Extract calendar attributes
+  rain_df[, Year := format(Date, "%Y")]
+  rain_df[is.na(Rain), Rain := 0]
+  
+  # 3. Calculate cumulative daily rainfall within each year
+  rain_df[, CumulativeRain := cumsum(Rain), by = Year]
+  
+  # 4. Create a fake static date for alignment (e.g., locking all data to the year 2024)
+  # This forces ggplot to treat the x-axis as a timeline from January to December
+  rain_df[, FakeDate := as.Date(paste0("2024-", format(Date, "%m-%d")))]
+  
+  # 5. Highlight the current year (2026) vs historical records
+  rain_df[, Period := ifelse(Year == "2026", "Current Year (2026)", "Historical")]
+  
+  return(rain_df)
+}
+
+
+calcAllSeasonalDeciles <- function(rain_xts){
+  
+  
   df_daily <- data.frame(date = index(rain_xts), value = coredata(rain_xts), row.names = NULL)
   colnames(df_daily) <- c('date', 'value')
   
@@ -367,77 +430,31 @@ plotSeasonalHeatMap <- function(rain_xts, imagePath=NULL){
   df_deciles$season <- factor(df_deciles$season, 
                               levels = c("Summer (DJF)", "Autumn (MAM)", "Winter (JJA)", "Spring (SON)"))
   
-  # 4. Generate the Heatmap
-p <- ggplot(df_deciles, aes(x = season, y = factor(season_year), fill = factor(decile))) +
-    geom_tile(color = "white", size = 0.2) +
-    scale_fill_brewer(palette = "RdYlBu", direction = 1, name = "Decile") +
-    scale_y_discrete(breaks = function(x) x[seq(1, length(x), by = 5)]) + # Show every 5th year for readability
-    scale_x_discrete(labels = c("Summer", "Autumn", "Winter", "Spring")) +
-    labs(
-      title = "Historical Seasonal Rainfall Deciles",
-      subtitle = "1960 - 2026",
-      x = "Season",
-      y = "Year"
-    ) +
-    theme_minimal(base_size = 12) +
-    theme(
-      panel.grid = element_blank(),
-      axis.text.x = element_text(face = "bold"),
-      plot.title = element_text(face = "bold", size = 14),
-      legend.position = "right"
-      #,aspect.ratio = 0.5
-    )
-
-if(!is.null(imagePath)){
+  return(df_deciles)
   
-  ggsave(imagePath, plot = p, width = 4, height = 8, dpi = 300)
-  b64 <- base64enc::base64encode(imagePath)
-  unlink(imagePath)
-  return(b64)
-}else{
-  p
-}
-
 }
 
 
+plotMonthlyTotalComparisons <- function(allSiteData, imagePath=NULL){
 
-
-plotMonthlyTotalComparisons <- function(rain_xts, imagePath=NULL){
-
-      # 1. Convert the daily xts object to a data.table
-      rain_df <- data.table(
-        Date = index(rain_xts),
-        Rain = as.numeric(rain_xts)
-      )
-      rain_df[is.na(Rain), Rain := 0]
+  
+  this_year_totals <- allSiteData$SiloSummary$monthlySummaries$this_year_monthly_totals
+  historical_avg <- allSiteData$SiloSummary$monthlySummaries$Historical_monthly_totals
       
-      # 2. Extract Year and Month attributes
-      rain_df[, Year  := format(Date, "%Y")]
-      rain_df[, Month := format(Date, "%b")] # e.g., "Jan", "Feb"
-      rain_df[, MonthNum := as.integer(format(Date, "%m"))]
-      
-      # 3. Calculate total rainfall for every specific month in the dataset
-      monthly_totals <- rain_df[, .(TotalRain = sum(Rain)), by = .(Year, Month, MonthNum)]
-      
-      # 4. Separate this year (2026) totals from historical records
-      this_year_totals <- monthly_totals[Year == "2026", .(Month, MonthNum, Rain = TotalRain, Type = "2026 Total")]
-      
-      # 5. Calculate the historical baseline average for each calendar month
-      historical_avg <- monthly_totals[Year != "2026", .(Rain = mean(TotalRain)), by = .(Month, MonthNum)]
-      historical_avg[, Type := "Historical Average"]
-      
+  yr <- year(Sys.Date())
       # 6. Combine datasets and sort chronologically by month number
       plot_data <- rbind(this_year_totals, historical_avg)
       plot_data[, Month := reorder(Month, MonthNum)]
+      idxs <- which(plot_data$Type == paste0(yr, ' Total'))
+      plot_data$Type[idxs] <- 'Current Year'
       
       # 7. Generate the side-by-side bar chart
       p <- ggplot(plot_data, aes(x = Month, y = Rain, fill = Type)) +
         geom_bar(stat = "identity", position = "dodge", width = 0.7) +
-        scale_fill_manual(values = c("2026 Total" = "steelblue", "Historical Average" = "darkgrey")) +
+        scale_fill_manual(values = c( "Current Year" = "steelblue", "Historical Average" = "darkgrey")) +
         theme_minimal() +
         labs(
-          title = "2026 Monthly Rainfall vs. Historical Baseline Average",
+          title = paste0(yr, " Monthly Rainfall vs. Historical Baseline Average"),
           x = "Month",
           y = "Rainfall Total (mm)",
           fill = "Dataset"
@@ -456,32 +473,17 @@ plotMonthlyTotalComparisons <- function(rain_xts, imagePath=NULL){
 }
 
 
-plotCummulativeDailyRainfallPerYear <- function(rain_xts, imagePath=NULL){
+plotCummulativeDailyRainfallPerYear <- function(allSiteData, imagePath=NULL){
   
-  # 1. Convert the daily xts object to a data.table
-  rain_df <- data.table(
-    Date = index(rain_xts),
-    Rain = as.numeric(rain_xts)
-  )
+ 
+  rain_df <-   allSiteData$SiloSummary$CummulativeDailyRainfallPerYear
   
-  # 2. Extract calendar attributes
-  rain_df[, Year := format(Date, "%Y")]
-  rain_df[is.na(Rain), Rain := 0]
-  
-  # 3. Calculate cumulative daily rainfall within each year
-  rain_df[, CumulativeRain := cumsum(Rain), by = Year]
-  
-  # 4. Create a fake static date for alignment (e.g., locking all data to the year 2024)
-  # This forces ggplot to treat the x-axis as a timeline from January to December
-  rain_df[, FakeDate := as.Date(paste0("2024-", format(Date, "%m-%d")))]
-  
-  # 5. Highlight the current year (2026) vs historical records
-  rain_df[, Period := ifelse(Year == "2026", "Current Year (2026)", "Historical")]
+  yr <- year(Sys.Date())
   
   # 6. Plot using Date scales for the x-axis
   p <- ggplot(rain_df, aes(x = FakeDate, y = CumulativeRain, group = Year)) +
     geom_line(data = rain_df[Period == "Historical"], aes(color = "Historical"), alpha = 0.4, linewidth = 0.5) +
-    geom_line(data = rain_df[Period == "Current Year (2026)"], aes(color = "Current Year (2026)"), linewidth = 1.2) +
+    geom_line(data = rain_df[Period == paste0("Current Year (", yr,")")], aes(color = paste0("Current Year (", yr,")")), linewidth = 1.2) +
     scale_color_manual(name = "Year Type", values = c("Current Year (2026)" = "steelblue", "Historical" = "darkgrey")) +
     # Format x-axis to show short month names (Jan, Feb, Mar...)
     scale_x_date(date_breaks = "1 month", date_labels = "%b") +
@@ -505,7 +507,40 @@ plotCummulativeDailyRainfallPerYear <- function(rain_xts, imagePath=NULL){
 }
 
 
-
+plotSeasonalHeatMap <- function(allSiteData, imagePath=NULL){
+  
+  # 4. Generate the Heatmap
+  p <- ggplot(df_deciles, aes(x = season, y = factor(season_year), fill = factor(decile))) +
+    geom_tile(color = "white", size = 0.2) +
+    scale_fill_brewer(palette = "RdYlBu", direction = 1, name = "Decile") +
+    scale_y_discrete(breaks = function(x) x[seq(1, length(x), by = 5)]) + # Show every 5th year for readability
+    scale_x_discrete(labels = c("Summer", "Autumn", "Winter", "Spring")) +
+    labs(
+      title = "Historical Seasonal Rainfall Deciles",
+      subtitle = "1960 - 2026",
+      x = "Season",
+      y = "Year"
+    ) +
+    theme_minimal(base_size = 12) +
+    theme(
+      panel.grid = element_blank(),
+      axis.text.x = element_text(face = "bold"),
+      plot.title = element_text(face = "bold", size = 14),
+      legend.position = "right"
+      #,aspect.ratio = 0.5
+    )
+  
+  if(!is.null(imagePath)){
+    
+    ggsave(imagePath, plot = p, width = 4, height = 8, dpi = 300)
+    b64 <- base64enc::base64encode(imagePath)
+    unlink(imagePath)
+    return(b64)
+  }else{
+    p
+  }
+  
+}
 
 
 
