@@ -1,0 +1,57 @@
+Site_Code,Lab_Name,SoilDB_Name,inApp,SM,Climate,Soil,Lab,Photos,Calibration
+SMPN009,Angaston,Angaston,N,,,,,,
+SMPN026,Bennets,Bennants,N,,,,,,
+SMPN027,Bennets,,N,,,,,,
+SMPN025,Bfarmers,B Farmers,Y,Y,Y,Y,Y,Y,Y
+,,Bishes,Y,Y,Y,Y,N,Y,Y
+,,Blundell,Y,Y,Y,N,N,N,Y
+SMPN013,Cadell,Cadell,Y,Y,Y,Y,Y,Y,Y
+SMPN016,Cambrai,Cambrai,Y,Y,Y,Y,Y,Y,Y
+SMPN029,Canary_Island,Canary Island,Y,Y,Y,Y,N,Y,Y
+,,Carnarvon Ashley,y,?,Y,Y,N,Y,N
+,,Carnarvon Boolataroo,Y,?,Y,Y,N,Y,N
+,,Carnarvon Rail,Y,?,Y,Y,N,Y,N
+SMPN017,Caurnamont,Caurnamont,Y,Y,Y,Y,Y,N,Y
+,,Corop,Y,Y,Y,N,N,N,Y
+SMPN011,Ebenezer,Ebenezer,Y,?,?,Y,Y,N,N
+SMPN006,Eden Valley,Eden Valley,Y,Y,Y,Y,Y,Y,Y
+SMPN033,FHRS_back_paddock,CSIRO_FHRS_BackPaddock,,,,,,,
+SMPN032,FHRS_Weather_Station,CSIRO_FHRS_WeatherStation,,,,,,,
+,,Hutton Vale,Y,Y,Y,N,N,Y,Y
+SMPN004,Kerang,Kerang,Y,Y,Y,Y,Y,Y,Y
+SMPN022,Kowen_forest_Bywong,Kowan Forest,Y,Y,Y,Y,N,N,Y
+SMPN003,Lake Boga,Lake Boga,Y,Y,Y,Y,Y,Y,Y
+SMPN007,Menglers Hill,Menglers Hill,N,,,,,,
+SMPN008,Mt. Crawford,Mt Crawford,Y,Y,Y,Y,Y,Y,Y
+SMPN030,Murchison,Murchison,Y,Y,Y,Y,N,Y,Y
+SMPN024,Namadgi_Cuppa,Cuppa,Y,Y,Y,Y,N,N,Y
+SMPN020,Narrung,Narrung,Y,Y,Y,Y,Y,Y,Y
+SMPN028,Nyah,Nyah,Y,Y,Y,Y,Y,Y,Y
+SMPN005,Poplars,Poplars,N,,,,,,
+SMPN001,Rochester 1 (Corrop),Rochester,Y,Y,Y,Y,Y,Y,Y
+SMPN002,Rochester 2,Rochester 2,N,,,,,,
+SMPN018,Sherlock,Sherlock,Y,Y,Y,Y,Y,Y,Y
+SMPN014,Taylorville,Tayorville,Y,Y,Y,Y,Y,Y,Y
+SMPN034,TERN_FLUX_Myall_Vale_dryland,Myall_Vale_Dryland,N,,,,,,
+SMPN031,Thoona,Thoona,Y,Y,Y,Y,Y,Y,Y
+SMPN010,Truro,Truro,Y,Y,Y,Y,Y,Y,Y
+SMPN023,Uriarra_Burra,Uriara,N,,,,,,
+SMPN015,Waikerie-Dryland,Waikerie-Dryland,Y,Y,Y,Y,Y,Y,Y
+SMPN019,Wellington East,Wellington East,Y,Y,Y,Y,Y,Y,Y
+SMPN021,Willamsdale_Majura,Majura,Y,Y,Y,Y,Y,N,Y
+SMPN012,Yamba,Yamba,Y,Y,Y,Y,Y,Y,Y
+,,Yass,Y,Y,Y,N,N,N,Y
+,,Boggabri Gowrie,Y,Y,Y,Y,N,N,N
+,,Cunningham,,,,,,,
+,,Gunnedah Kelvin,Y,?,Y,Y,N,?,N
+,,Gunnedah Oxley,Y,?,?,Y,N,Y,N
+,,Llara Black,Y,?,?,Y,N,?,N
+,,Llara Brown,Y,?,?,Y,N,?,N
+,,Moree North,,,,,,,
+,,Narrabri West Plain,Y,?,?,Y,N,N,N
+,,Nowley Coolanbilla,Y,?,?,Y,N,Y,N
+,,Nowley Howes Hill Red,Y,?,?,Y,N,Y,N
+,,Nowley Sodic Plain,Y,?,?,Y,N,Y,N
+,,Pilliga Middle Rte,Y,?,?,Y,N,Y,N
+,,Walgett South,Y,?,?,Y,N,Y,N
+,,Wellington South,N,,,,,,

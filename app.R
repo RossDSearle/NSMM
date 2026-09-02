@@ -137,6 +137,9 @@ ui <- fluidPage(
  
   
   tags$head(
+    
+    includeHTML("google-analytics.html"),
+    
     tags$style(HTML("
       #shiny-notification-panel {
         position: fixed;
