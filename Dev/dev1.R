@@ -83,6 +83,8 @@ input$wgt_SMmain_SiteName <- 'Nyah'
 obsID = 1
 
 
+sd <- getAllSiteData(user=NULL, Network = 'NSMM', SiteName = 'Llara Brown', Email='ross.searle@gmail.com', makeTS = T)
+allsd <- sd
 
 
 

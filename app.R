@@ -61,6 +61,7 @@ if (machineName=='landscapes-soils') {
  # source('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/Backends/ObjectStore.R')
   APIUrl <<- 'http://127.0.0.1:8071/SensorAPI/'  ### need to run script to make this available - C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/TernLandscapes/APIs/SoilMoistureProbesAPI/WebAPI/RunAPIAsync.R
   #APIUrl <<- 'http://203.101.224.137:8071/SensorAPI'
+  #APIUrl <<- 'http://203.101.224.137:8071/SensorAPI/'
   setwd('C:/Users/sea084/OneDrive - CSIRO/RossRCode/Git/Shiny/NSMM')
   PhotoRoot <- 'C:/Projects/NSMM/Photos/AppPhotoLibrary'
  
